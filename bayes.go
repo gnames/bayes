@@ -1,11 +1,12 @@
 /*
-Package bayes implements Naive Bayes trainer and classifier.  Naive BayeNas
-theorem calculates a probability of a hypothesis from a prior knowledge
-about the hypothesis, as well as the evidence that supports or diminishes the
-probability of the hypothesis.  Prior knowledge can dramatically influence the
-posterior probability of a hypothesis.  For example assuming that an adult bird
-that cannot fly is a penguin is very unlikely in the northern hemisphere, but
-is very likely in Antarctica. Bayes' theorem is often depicted as
+
+Package bayes implements Naive Bayes trainer and classifier. Naive Bayes rule
+calculates a probability of a hypothesis from a prior knowledge about the
+hypothesis, as well as the evidence that supports or diminishes the probability
+of the hypothesis. Prior knowledge can dramatically influence the posterior
+probability of a hypothesis. For example assuming that an adult bird that
+cannot fly is a penguin is very unlikely in the northern hemisphere, but is
+very likely in Antarctica. Bayes' theorem is often depicted as
 
 	P(H|E) = P(H) * P(E|H) / P(E)
 
@@ -67,12 +68,12 @@ cases it is better to use logarithms of prior odds and evidences likelihoods
 
 Training and prior odds
 
-It is quite possible that while likelihoods of evidences are quite
-representative in the training data the prior odds from the training are not.
-As in the previous example an evidence that a bird cannot fly supports a
-'penguin' hypothesis much better in Antarctica because odds to meet a
-penguin there are much higher than in the northern hemisphere. Therefore we
-give an ability to supply prior probability value at a classification event.
+It is quite possible that while likelihoods of evidences are representative for
+classification data the prior odds from the training are not.  As in the
+previous example an evidence that a bird cannot fly supports a 'penguin'
+hypothesis much better in Antarctica because odds to meet a penguin there are
+much higher than in the northern hemisphere. Therefore we give an ability to
+supply prior probability value at a classification event.
 
 Terminology
 
@@ -130,6 +131,7 @@ type OptionNB func(*NaiveBayes) error
 // the NaiveBayes object.
 // Currently constructor supports the following options:
 //
+// `WithLidstoneSmoothing` --- sets `LidstoneSmoothing` to a float
 // `WithLaplaceSmoothing` --- sets `LaplaceSmoothing` option to `true`
 func NewNaiveBayes(opts ...OptionNB) *NaiveBayes {
 	nb := &NaiveBayes{

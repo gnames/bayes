@@ -1,7 +1,6 @@
 package bayes
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -26,8 +25,7 @@ func WithLaplaceSmoothing(nb *NaiveBayes) error {
 func WithLidstoneSmoothing(a float64) func(*NaiveBayes) error {
 	return func(nb *NaiveBayes) error {
 		if a <= 0 || a >= 1 {
-			err := fmt.Sprintf("Coefficient %0.2f is out of range", a)
-			return errors.New(err)
+			return fmt.Errorf("Coefficient %0.2f is out of range", a)
 		}
 		nb.LidstoneSmoothing = a
 		return nil
@@ -79,6 +77,9 @@ func (nb *NaiveBayes) AddLaplaceSmoothing() {
 	}
 }
 
+// AddLidstoneSmoothing is similar to AddLaplaceSmoothing, but the smoothing
+// coefficient is a float64 value between 0 and 1. As a result it creates
+// less skewing of the outcomes than Laplace smoothing.
 func (nb *NaiveBayes) AddLidstoneSmoothing() {
 	for f := range nb.FeatureFreq {
 		for _, l := range nb.Labels {

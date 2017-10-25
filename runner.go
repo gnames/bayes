@@ -71,10 +71,9 @@ func checkLabels(nb *NaiveBayes) error {
 		return err2
 	}
 
-	for k1, _ := range nb.currentLabelFreq {
+	for k1 := range nb.currentLabelFreq {
 		if _, ok := nb.LabelFreq[k1]; !ok {
-			return errors.New(
-				fmt.Sprintf("Label %s does not exist in training set", k1))
+			return fmt.Errorf("Label %s does not exist in training set", k1)
 		}
 	}
 	return nil
