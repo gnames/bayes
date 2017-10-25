@@ -1,5 +1,4 @@
 /*
-
 Package bayes implements Naive Bayes trainer and classifier. Naive Bayes rule
 calculates a probability of a hypothesis from a prior knowledge about the
 hypothesis, as well as the evidence that supports or diminishes the probability
@@ -86,6 +85,13 @@ package we use the term `label` for hypotheses.
 */
 package bayes
 
+import (
+	"bytes"
+	"io"
+
+	jsoniter "github.com/json-iterator/go"
+)
+
 // Label is a string representation of a "hypothesis" or "class" the NaiveBayes
 // is aware about.
 type Label string
@@ -137,7 +143,7 @@ func NewNaiveBayes(opts ...OptionNB) *NaiveBayes {
 	nb := &NaiveBayes{
 		LabelFreq:    make(map[Label]float64),
 		FeatureFreq:  make(map[FeatureName]map[Label]float64),
-		featureTotal: make(map[FeatureName]float64),
+		FeatureTotal: make(map[FeatureName]float64),
 	}
 	for _, o := range opts {
 		err := o(nb)
@@ -153,13 +159,45 @@ NaiveBayes is a classifier for assigning an entity represented by its features
 to a label.
 */
 type NaiveBayes struct {
-	LaplaceSmoothing  bool
-	LidstoneSmoothing float64
-	Labels            []Label
-	FeatureFreq
-	LabelFreq
-	currentLabelFreq  LabelFreq
+	// LaplaceSmoothing is an option for adding Laplace smooting.
+	LaplaceSmoothing bool `json:"laplace"`
+	// LidstoneSmoothing is an option for adding Lidstone smooting. It is
+	// considered not to be set if it is 0.0. If both Lidstone and Laplace
+	// options are set, only Lidstone smoothing is applied.
+	LidstoneSmoothing float64 `json:"lidstone"`
+	// Labels is a list of "hypotheses", "classes", "categories", "labels".
+	// It contains all labels created by training.
+	Labels []Label `json:"labels"`
+	// FeatureFreq keeps count of all the features for the labels.
+	FeatureFreq `json:"feature_freq"`
+	// LabelFreq is a convenience field, that keeps count of features for
+	// all labels.
+	LabelFreq `json:"label_freq"`
+	// FeatureTotal is a convenience field, thata keeps total count
+	// for the features.
+	FeatureTotal map[FeatureName]float64 `json:"feature_total"`
+	// Total is a convenience field, that keeps total count of all training data.
+	Total float64 `json:"total"`
+	// currentLabelFreq keeps count for dynamically supplied labels
+	currentLabelFreq LabelFreq
+	// currentLabelTotal keeps total count of all supplied labels
 	currentLabelTotal float64
-	featureTotal      map[FeatureName]float64
-	total             float64
+	Output            io.Writer `json:"-"`
+}
+
+func (nb *NaiveBayes) Dump() []byte {
+	json, err := jsoniter.MarshalIndent(nb, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return json
+}
+
+func (nb *NaiveBayes) Restore(dump []byte) *NaiveBayes {
+	r := bytes.NewReader(dump)
+	err := jsoniter.NewDecoder(r).Decode(nb)
+	if err != nil {
+		panic(err)
+	}
+	return nb
 }

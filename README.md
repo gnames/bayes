@@ -2,6 +2,15 @@
 
 A simple implementation of Naive Bayes classifier. More details are in [docs].
 
+# Testing
+
+Install [ginkgo], a [BDD] testing framefork for Go.
+
+```bash
+go get github.com/onsi/ginkgo/ginkgo
+go get github.com/onsi/gomega
+```
+
 
 Other implementations:
 
@@ -13,8 +22,11 @@ Other implementations:
 
 [R][r-bayes]
 
-[Ruby] [ruby-bayes]
+[Ruby][ruby-bayes]
 
+
+[BDD]: https://en.wikipedia.org/wiki/Behavior-driven_development
+[ginkgo]: https://github.com/onsi/ginkgo#set-me-up
 [docs]: https://godoc.org/github.com/gnames/bayes
 [r-bayes]: https://CRAN.R-project.org/package=naivebayes
 [py-bayes]: http://www.nltk.org/api/nltk.classify.html#nltk.classify.naivebayes.NaiveBayesClassifier

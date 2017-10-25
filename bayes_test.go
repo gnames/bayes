@@ -44,6 +44,18 @@ var _ = Describe("Bayes", func() {
 		})
 	})
 
+	Describe("Dump/Restore", func() {
+		It("Dumps the content of NaiveBayes object to json file", func() {
+			lfs := cookieJarsFeatures()
+			nb := TrainNB(lfs)
+			json := nb.Dump()
+			Expect(string(json)[0:20]).To(Equal("{\n  \"laplace\": false"))
+			nb2 := NewNaiveBayes()
+			nb2.Restore(json)
+			Expect(nb2.Total).To(Equal(80.0))
+		})
+	})
+
 	Describe("Predict()", func() {
 		Context("Two labels", func() {
 			It("Calculates posterior Probabilities", func() {

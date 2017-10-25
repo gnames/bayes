@@ -33,7 +33,7 @@ func (nb *NaiveBayes) Predict(fs []Feature,
 	opts ...OptionNB) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
 	lf := nb.LabelFreq
-	total := nb.total
+	total := nb.Total
 
 	for _, o := range opts {
 		err := o(nb)
@@ -132,8 +132,8 @@ func likelihood(nb *NaiveBayes, feature Feature, label Label) float64 {
 
 	pFeature := featureFreq / nb.LabelFreq[label]
 
-	pRest := (nb.featureTotal[name] - featureFreq) /
-		(nb.total - nb.LabelFreq[label])
+	pRest := (nb.FeatureTotal[name] - featureFreq) /
+		(nb.Total - nb.LabelFreq[label])
 	return pFeature / pRest
 }
 

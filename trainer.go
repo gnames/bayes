@@ -103,8 +103,8 @@ func trainFeatures(nb *NaiveBayes, lf LabeledFeatures) {
 func featureTotal(nb *NaiveBayes) {
 	for feature, labels := range nb.FeatureFreq {
 		for _, v := range labels {
-			nb.featureTotal[feature] += v
-			nb.total += v
+			nb.FeatureTotal[feature] += v
+			nb.Total += v
 		}
 	}
 }
