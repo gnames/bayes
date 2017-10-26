@@ -1,8 +1,10 @@
-# bayes
+# bayes [![Build Status][travis-img]][travis] [![Doc Status][doc-img]][doc]
 
 A simple implementation of Naive Bayes classifier. More details are in [docs].
 
-# Testing
+## Development
+
+### Testing
 
 Install [ginkgo], a [BDD] testing framefork for Go.
 
@@ -11,20 +13,28 @@ go get github.com/onsi/ginkgo/ginkgo
 go get github.com/onsi/gomega
 ```
 
+To run tests go to root directory of the project and run
 
-Other implementations:
+```bash
+ginkgo
 
-[Go][go-bayes]
+#or
 
-[Java][java-bayes]
+go test
+```
 
-[Python][py-bayes]
+## Other implementations:
 
-[R][r-bayes]
-
+[Go][go-bayes],
+[Java][java-bayes],
+[Python][py-bayes],
+[R][r-bayes],
 [Ruby][ruby-bayes]
 
-
+[travis-img]: https://travis-ci.org/gnames/bayes.svg?branch=master
+[travis]: https://travis-ci.org/gnames/bayes
+[doc-img]: https://godoc.org/github.com/gnames/bayes?status.png
+[doc]: https://godoc.org/github.com/gnames/bayes
 [BDD]: https://en.wikipedia.org/wiki/Behavior-driven_development
 [ginkgo]: https://github.com/onsi/ginkgo#set-me-up
 [docs]: https://godoc.org/github.com/gnames/bayes
