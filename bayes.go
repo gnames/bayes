@@ -54,11 +54,13 @@ type OptionNB func(*NaiveBayes) error
 //
 // `WithLidstoneSmoothing` --- sets `LidstoneSmoothing` to a float
 // `WithLaplaceSmoothing` --- sets `LaplaceSmoothing` option to `true`
+// `WithLanguage` --- assigns a language to a string
 func NewNaiveBayes(opts ...OptionNB) *NaiveBayes {
 	nb := &NaiveBayes{
 		LabelFreq:    make(map[Label]float64),
 		FeatureFreq:  make(map[FeatureName]map[Label]float64),
 		FeatureTotal: make(map[FeatureName]float64),
+		Language:     "en",
 	}
 	for _, o := range opts {
 		err := o(nb)
@@ -93,6 +95,8 @@ type NaiveBayes struct {
 	FeatureTotal map[FeatureName]float64 `json:"feature_total"`
 	// Total is a convenience field that keeps total count of all training data.
 	Total float64 `json:"total"`
+	// Language of the training set
+	Language string `json:"language"`
 	// currentLabelFreq keeps count for dynamically supplied labels frequencies
 	currentLabelFreq LabelFreq
 	// currentLabelTotal keeps total count of all supplied labels

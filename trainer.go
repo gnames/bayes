@@ -32,6 +32,17 @@ func WithLidstoneSmoothing(a float64) func(*NaiveBayes) error {
 	}
 }
 
+// WithLanguage is an option that assignes a language to a training set.
+func WithLanguage(l string) func(*NaiveBayes) error {
+	return func(nb *NaiveBayes) error {
+		if l != "en" {
+			return fmt.Errorf("Unknown language %s", l)
+		}
+		nb.Language = l
+		return nil
+	}
+}
+
 // TrainNB takes data from a training dataset and returns back a trained
 // classifier.
 func TrainNB(lfs []LabeledFeatures, opts ...OptionNB) *NaiveBayes {
