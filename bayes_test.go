@@ -16,7 +16,6 @@ var _ = Describe("Bayes", func() {
 			nb := NewNaiveBayes()
 			Expect(len(nb.Labels)).To(Equal(0))
 			Expect(nb).ToNot(Equal(NaiveBayes{}))
-			Expect(nb.LaplaceSmoothing).To(Equal(false))
 		})
 
 	})
@@ -27,20 +26,11 @@ var _ = Describe("Bayes", func() {
 			lfs = cookieJarsFeatures()
 			nb := TrainNB(lfs)
 			Expect(len(nb.Labels)).To(Equal(2))
-			Expect(nb.FeatureFreq[FeatureName("PlainF")][Label("jar1")]).To(Equal(30.0))
-			Expect(nb.FeatureFreq[FeatureName("ChocolateF")][Label("jar2")]).
-				To(Equal(20.0))
+			plain := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("plain")]
+			Expect(plain[Label("jar1")]).To(Equal(30.0))
+			chocolate := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("chocolate")]
+			Expect(chocolate[Label("jar2")]).To(Equal(20.0))
 			Expect(nb.LabelFreq[Label("jar1")]).To(Equal(40.0))
-		})
-		It("can return Laplace smoothing", func() {
-			var lfs []LabeledFeatures
-			lfs = cookieJarsFeatures()
-			nb := TrainNB(lfs, WithLaplaceSmoothing)
-			Expect(len(nb.Labels)).To(Equal(2))
-			Expect(nb.FeatureFreq[FeatureName("PlainF")][Label("jar1")]).To(Equal(31.0))
-			Expect(nb.FeatureFreq[FeatureName("ChocolateF")][Label("jar2")]).
-				To(Equal(21.0))
-			Expect(nb.LabelFreq[Label("jar1")]).To(Equal(42.0))
 		})
 	})
 
@@ -49,7 +39,7 @@ var _ = Describe("Bayes", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
 			json := nb.Dump()
-			Expect(string(json)[0:20]).To(Equal("{\n  \"laplace\": false"))
+			Expect(string(json)[0:15]).To(Equal("{\n  \"labels\": ["))
 			nb2 := NewNaiveBayes()
 			nb2.Restore(json)
 			Expect(nb2.Total).To(Equal(80.0))
@@ -61,7 +51,7 @@ var _ = Describe("Bayes", func() {
 			It("Calculates posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Feature{PlainF{}})
+				p, err := nb.Predict([]Feature{CookieF{"plain"}})
 				if err != nil {
 					panic(err)
 				}
@@ -69,35 +59,66 @@ var _ = Describe("Bayes", func() {
 				Expect(p.MaxLabel).To(Equal(Label("jar1")))
 			})
 
-			It("Calculates multiple features", func() {
+			It("Calculates multiple posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				f := []Feature{ChocolateF{}, ChocolateF{}, ChocolateF{}, ChocolateF{}}
+				p, err := nb.Predict([]Feature{CookieF{"plain"}, CookieF{"plain"}})
+				if err != nil {
+					panic(err)
+				}
+				Expect(p.MaxOdds).To(Equal(2.25))
+				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+			})
+
+			It("compensates infinite odds with crude smoothing", func() {
+				lfs := cookieJarsFeatures()
+				nb := TrainNB(lfs)
+				f := []Feature{CookieF{"chocolate"}, ShapeF{"star"}}
+
 				p, err := nb.Predict(f)
 				if err != nil {
 					panic(err)
 				}
-				Expect(p.MaxLabel).To(Equal(Label("jar2")))
-				Expect(p.MaxOdds).To(Equal(16.0))
+				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxOdds).To(BeNumerically("~", 20, 1))
 			})
 
-			It("Calculcates using smoothed training set", func() {
+			It("ignores features that are not in training", func() {
 				lfs := cookieJarsFeatures()
-				nb := TrainNB(lfs, WithLaplaceSmoothing)
-				p, err := nb.Predict([]Feature{PlainF{}})
-				if err != nil {
-					panic(err)
-				}
+				nb := TrainNB(lfs)
+				f := []Feature{CookieF{"plain"}, ShapeF{"square"}}
+
+				p, err := nb.Predict(f)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxLabel).To(Equal(Label("jar1")))
-				Expect(p.MaxOdds).To(BeNumerically("~", 1.476, 0.001))
+				Expect(p.MaxOdds).To(Equal(1.5))
+			})
+
+			It("breaks on unknown features", func() {
+				lfs := cookieJarsFeatures()
+				nb := TrainNB(lfs)
+				f := []Feature{UnknownF{}}
+				_, err := nb.Predict(f)
+				Expect(err.Error()).To(Equal("All features are unknown"))
+			})
+
+			It("ignores uknown features", func() {
+				lfs := cookieJarsFeatures()
+				nb := TrainNB(lfs)
+				f := []Feature{CookieF{"plain"}, UnknownF{}}
+				p, err := nb.Predict(f)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(p.MaxOdds).To(Equal(1.5))
+				Expect(p.MaxLabel).To(Equal(Label("jar1")))
 			})
 		})
 
 		Context("Three labels", func() {
-			It("Calculcates with 3 labels", func() {
+			It("calculcates with 3 labels", func() {
 				lfs := threeCookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Feature{ChocolateF{}, ChocolateF{}})
+				p, err := nb.Predict([]Feature{CookieF{"chocolate"},
+					CookieF{"chocolate"}})
 				if err != nil {
 					panic(err)
 				}
@@ -106,44 +127,56 @@ var _ = Describe("Bayes", func() {
 			})
 		})
 
-		It("Can calculate for 0 frequency", func() {
+		It("can calculate for 0 frequency", func() {
 			lfs := threeCookieJarsFeatures()
 			nb := TrainNB(lfs)
-			p, err := nb.Predict([]Feature{PlainF{}})
+			p, err := nb.Predict([]Feature{CookieF{"plain"}})
 			if err != nil {
 				panic(err)
 			}
 			Expect(p.MaxLabel).To(Equal(Label("jar1")))
 			Expect(p.MaxOdds).To(BeNumerically("~", 1.499, 0.01))
 		})
-
-		It("Can calculate with Lidstone smoothing", func() {
-			lfs := threeCookieJarsFeatures()
-			nb := TrainNB(lfs, WithLidstoneSmoothing(0.5))
-			p, err := nb.Predict([]Feature{PlainF{}})
-			if err != nil {
-				panic(err)
-			}
-			Expect(p.MaxLabel).To(Equal(Label("jar1")))
-			Expect(p.MaxOdds).To(BeNumerically("~", 1.452, 0.01))
-		})
 	})
 })
 
-type ChocolateF struct{}
-type PlainF struct{}
+type CookieF struct {
+	kind string
+}
 
-func (c ChocolateF) Name() FeatureName {
+func (c CookieF) Name() FeatureName {
 	return featureName(c)
 }
 
-func (p PlainF) Name() FeatureName {
-	return featureName(p)
+func (c CookieF) Value() FeatureValue {
+	return FeatureValue(c.kind)
+}
+
+type ShapeF struct {
+	kind string
+}
+
+func (s ShapeF) Name() FeatureName {
+	return featureName(s)
+}
+
+func (s ShapeF) Value() FeatureValue {
+	return FeatureValue(s.kind)
 }
 
 func featureName(f Feature) FeatureName {
 	t := strings.Split(reflect.TypeOf(f).Name(), ".")
 	return FeatureName(t[len(t)-1])
+}
+
+type UnknownF struct{}
+
+func (u UnknownF) Name() FeatureName {
+	return featureName(u)
+}
+
+func (u UnknownF) Value() FeatureValue {
+	return FeatureValue("true")
 }
 
 // cookieJarsFeatures implements features from
@@ -152,37 +185,48 @@ func featureName(f Feature) FeatureName {
 // jar2 has 20 of each. If a cookie is randomly taken from a random jar, what
 // is a probability it came from the jar1?
 func cookieJarsFeatures() []LabeledFeatures {
-	var f Feature
-	lfs := []LabeledFeatures{
-		{Label: Label("jar1")},
-		{Label: Label("jar2")},
-	}
+	var f1 CookieF
+	var f2 ShapeF
+	var lfs []LabeledFeatures
 
 	for i := 1; i <= 40; i++ {
-		f = ChocolateF{}
+		f1 = CookieF{"chocolate"}
 		if i > 10 {
-			f = PlainF{}
+			f1 = CookieF{"plain"}
 		}
-		lfs[0].Features = append(lfs[0].Features, f)
+		f2 = ShapeF{"star"}
+		lf := LabeledFeatures{
+			Label:    Label("jar1"),
+			Features: []Feature{f1, f2},
+		}
+		lfs = append(lfs, lf)
 	}
 
 	for i := 1; i <= 40; i++ {
-		f = ChocolateF{}
+		f1 = CookieF{"chocolate"}
 		if i > 20 {
-			f = PlainF{}
+			f1 = CookieF{"plain"}
 		}
-		lfs[1].Features = append(lfs[1].Features, f)
+		f2 = ShapeF{"round"}
+		lf := LabeledFeatures{
+			Label:    Label("jar2"),
+			Features: []Feature{f1, f2},
+		}
+		lfs = append(lfs, lf)
 	}
 	return lfs
 }
 
 func threeCookieJarsFeatures() []LabeledFeatures {
-	var f Feature
+	var f CookieF
 	lfs := cookieJarsFeatures()
-	lfs = append(lfs, LabeledFeatures{Label: Label("jar3")})
 	for i := 1; i <= 40; i++ {
-		f = ChocolateF{}
-		lfs[2].Features = append(lfs[2].Features, f)
+		f = CookieF{"chocolate"}
+		lf := LabeledFeatures{
+			Label:    Label("jar3"),
+			Features: []Feature{f},
+		}
+		lfs = append(lfs, lf)
 	}
 	return lfs
 }

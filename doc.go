@@ -53,21 +53,6 @@ apply it "naively" state that their evidences are completely independent from
 each other. In practice Naive Bayes approach often shows good results in spite
 of this known fallacy.
 
-Some likelihoods are infinite. For example for modern penguins likelihood of
-not flying is infinite (there are no penguins able to fly). To deal with such
-likelihoods we introduce Laplace smoothing. It is equivalent to adding 'fake'
-occurrence for every feature" to each hypothesis.
-
-Danger of float values underflow
-
-Given a very large number of evidences (for example a probability words
-occurrence in large texts) it is possible to get in a situation when we
-multiply a large number of values that are smaller than 1 leading to a result
-that is extremely close to 0. Such result might underflow float64 type. In such
-cases it is better to use logarithms of prior odds and evidences likelihoods
-
-	log(oddsPosterior) = log(oddsPrior) + log(likelihood1) + log(likelihood2) ...
-
 Training and prior odds
 
 It is quite possible that while likelihoods of evidences are representative for
@@ -84,6 +69,7 @@ follow the same convention in this package.
 
 Hypotheses are often called `classes` or `labels`. Based on the outcome we
 classify an entity (assign a label to the entity in other words). In this
-package we use the term `label` for hypotheses.
+package we use the term `label` for hypotheses. Every label receives a number
+of elements or `tokens`, each with a set of features.
 */
 package bayes

@@ -14,15 +14,22 @@ type Label string
 // FeatureName is a name of a Feature
 type FeatureName string
 
+// FeatureName is a value of a Feature
+type FeatureValue string
+
 // Feature is an interface of an "evidence" we use for training a NaiveBayes
 // classifier, or for the classification of an unknown entity.
 type Feature interface {
+	// Name defines an id of a feature
 	Name() FeatureName
+	// Value defines the value of a feature. The value set can be simple
+	// 'true|false' or more complex 'red|blue|grey|yellow'
+	Value() FeatureValue
 }
 
 // FeatureFreq is a map for collecting frequencies of a training feature set.
 // FeatureFreq is used for calculating Likelihoods of a NaiveBayes classifier.
-type FeatureFreq map[FeatureName]map[Label]float64
+type FeatureFreq map[FeatureName]map[FeatureValue]map[Label]float64
 
 // FeatureTotal is used for calculating multinomial likelihoods. For example
 // if we are interested in calculating likelihood of feature `f` its
@@ -30,7 +37,7 @@ type FeatureFreq map[FeatureName]map[Label]float64
 //   L = P(f|H)/P(f/H')
 // where `H` is main "hypothesis" or "label" and `H'` is a combination of all
 // other hypotheses.
-type FeatureTotal map[FeatureName]float64
+type FeatureTotal map[FeatureName]map[FeatureValue]float64
 
 // LabelFreq is a collection of counts for every Label in the training dataset.
 // this information allows to calculate prior odds for a Label.
@@ -51,22 +58,11 @@ type OptionNB func(*NaiveBayes) error
 // several important defaults, and sets options that modify behavior of
 // the NaiveBayes object.
 // Currently constructor supports the following options:
-//
-// `WithLidstoneSmoothing` --- sets `LidstoneSmoothing` to a float
-// `WithLaplaceSmoothing` --- sets `LaplaceSmoothing` option to `true`
-// `WithLanguage` --- assigns a language to a string
-func NewNaiveBayes(opts ...OptionNB) *NaiveBayes {
+func NewNaiveBayes() *NaiveBayes {
 	nb := &NaiveBayes{
 		LabelFreq:    make(map[Label]float64),
-		FeatureFreq:  make(map[FeatureName]map[Label]float64),
-		FeatureTotal: make(map[FeatureName]float64),
-		Language:     "en",
-	}
-	for _, o := range opts {
-		err := o(nb)
-		if err != nil {
-			panic(err)
-		}
+		FeatureFreq:  make(map[FeatureName]map[FeatureValue]map[Label]float64),
+		FeatureTotal: make(map[FeatureName]map[FeatureValue]float64),
 	}
 	return nb
 }
@@ -76,27 +72,17 @@ NaiveBayes is a classifier for assigning an entity represented by its features
 to a label.
 */
 type NaiveBayes struct {
-	// LaplaceSmoothing is an option for adding Laplace smoothing.
-	LaplaceSmoothing bool `json:"laplace"`
-	// LidstoneSmoothing is an option for adding Lidstone smoothing. It is
-	// considered not to be set if it is 0.0. If both Lidstone and Laplace
-	// options are set, only Lidstone smoothing is applied.
-	LidstoneSmoothing float64 `json:"lidstone"`
 	// Labels is a list of "hypotheses", "classes", "categories", "labels".
 	// It contains all labels created by training.
 	Labels []Label `json:"labels"`
 	// FeatureFreq keeps count of all the features for the labels.
 	FeatureFreq `json:"feature_freq"`
-	// LabelFreq is a convenience field that keeps count of features for
-	// all labels.
+	// LabelFreq keeps counts of the tokens belonging to each label
 	LabelFreq `json:"label_freq"`
-	// FeatureTotal is a convenience field that keeps total count
-	// for the features.
-	FeatureTotal map[FeatureName]float64 `json:"feature_total"`
-	// Total is a convenience field that keeps total count of all training data.
+	// FeatureTotal keeps total count of tokens for each feature.
+	FeatureTotal `json:"feature_total"`
+	// Total is a total number of tokens used for training.
 	Total float64 `json:"total"`
-	// Language of the training set
-	Language string `json:"language"`
 	// currentLabelFreq keeps count for dynamically supplied labels frequencies
 	currentLabelFreq LabelFreq
 	// currentLabelTotal keeps total count of all supplied labels

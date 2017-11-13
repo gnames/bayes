@@ -12,7 +12,7 @@ type Posterior struct {
 	MaxOdds   float64
 }
 
-// WithPriorOdds allows to dynamically change prior odds used in calculations.
+// WithPriorOdds allows dynamical change of prior odds used in calculations.
 // Sometimes prior odds during classification event are very different from
 // ones aquired during training. If for example 'real' prior odds are 100 times
 // larger it means the calculated posterior odds will be 100 times smaller than
@@ -28,7 +28,8 @@ func WithPriorOdds(lf LabelFreq) func(*NaiveBayes) error {
 }
 
 // Predict is a general function that runs NaiveBayes classifier against
-// trained set. It can take options that
+// trained set. It can take a different PriorOdds value to influence
+// calculation of the Posterior Odds.
 func (nb *NaiveBayes) Predict(fs []Feature,
 	opts ...OptionNB) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
@@ -55,8 +56,6 @@ func (nb *NaiveBayes) Predict(fs []Feature,
 	switch {
 	case l < 2:
 		return Posterior{}, errors.New("Labels are empty")
-	case l == 2:
-		return pairPosterior(nb, fs, lf, total)
 	default:
 		return multiPosterior(nb, fs, lf, total)
 	}
@@ -79,61 +78,62 @@ func checkLabels(nb *NaiveBayes) error {
 	return nil
 }
 
-// special case when there are exactly 2 labels
-func pairPosterior(nb *NaiveBayes, fs []Feature,
-	lf LabelFreq, total float64) (Posterior, error) {
-	label1 := nb.Labels[0]
-	label2 := nb.Labels[1]
-
-	lo := make(map[Label]float64)
-	lo[label1] = oddsPrior(lf, label1, total)
-
-	for _, f := range fs {
-		p1 := nb.FeatureFreq[f.Name()][label1] /
-			nb.LabelFreq[label1]
-		p2 := nb.FeatureFreq[f.Name()][label2] /
-			nb.LabelFreq[label2]
-		lo[label1] *= p1 / p2
+func noSuchFeature(f Feature, nb *NaiveBayes) bool {
+	name := f.Name()
+	if _, ok := nb.FeatureFreq[name]; ok {
+		value := f.Value()
+		if _, ok = nb.FeatureFreq[name][value]; ok {
+			return false
+		}
 	}
-	lo[label2] = 1 / lo[label1]
-
-	maxL := label1
-	maxO := lo[label1]
-	if lo[label2] > maxO {
-		maxL = label2
-		maxO = lo[label2]
-	}
-
-	return Posterior{lo, maxL, maxO}, nil
+	return true
 }
 
 func multiPosterior(nb *NaiveBayes, fs []Feature,
 	lf LabelFreq, total float64) (Posterior, error) {
 	var MaxLabel Label
 	var MaxOdds float64
-	lo := make(map[Label]float64)
+	oddsPost := make(map[Label]float64)
 	for _, label := range nb.Labels {
-		lo[label] = oddsPrior(lf, label, total)
+		oddsPost[label] = oddsPrior(lf, label, total)
+		i := 0
 		for _, f := range fs {
-			lo[label] *= likelihood(nb, f, label)
-			if lo[label] > MaxOdds {
-				MaxOdds = lo[label]
+			if noSuchFeature(f, nb) {
+				continue
+			}
+			i++
+			oddsPost[label] *= likelihood(nb, f, label)
+			if oddsPost[label] > MaxOdds {
+				MaxOdds = oddsPost[label]
 				MaxLabel = label
 			}
 		}
+		if i == 0 {
+			return Posterior{}, errors.New("All features are unknown")
+		}
 	}
-	p := Posterior{lo, MaxLabel, MaxOdds}
+	p := Posterior{oddsPost, MaxLabel, MaxOdds}
 	return p, nil
 }
 
 func likelihood(nb *NaiveBayes, feature Feature, label Label) float64 {
+	smooth := 1.0
 	name := feature.Name()
-	featureFreq := nb.FeatureFreq[name][label]
+	value := feature.Value()
+	countFeature := nb.FeatureFreq[name][value][label]
+	countRest := (nb.FeatureTotal[name][value] - countFeature)
+	pFeature := countFeature / nb.LabelFreq[label]
 
-	pFeature := featureFreq / nb.LabelFreq[label]
+	// crude smoothing
+	if countFeature == 0 {
+		countFeature = smooth
+	}
+	if countRest == 0 {
+		countRest = smooth
+	}
+	// end crude smoothing
 
-	pRest := (nb.FeatureTotal[name] - featureFreq) /
-		(nb.Total - nb.LabelFreq[label])
+	pRest := countRest / (nb.Total - nb.LabelFreq[label])
 	return pFeature / pRest
 }
 
