@@ -51,7 +51,7 @@ var _ = Describe("Bayes", func() {
 			It("Calculates posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Feature{CookieF{"plain"}})
+				p, err := nb.Predict([]Featurer{CookieF{"plain"}})
 				if err != nil {
 					panic(err)
 				}
@@ -62,7 +62,7 @@ var _ = Describe("Bayes", func() {
 			It("Calculates multiple posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Feature{CookieF{"plain"}, CookieF{"plain"}})
+				p, err := nb.Predict([]Featurer{CookieF{"plain"}, CookieF{"plain"}})
 				if err != nil {
 					panic(err)
 				}
@@ -73,7 +73,7 @@ var _ = Describe("Bayes", func() {
 			It("compensates infinite odds with crude smoothing", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				f := []Feature{CookieF{"chocolate"}, ShapeF{"star"}}
+				f := []Featurer{CookieF{"chocolate"}, ShapeF{"star"}}
 
 				p, err := nb.Predict(f)
 				if err != nil {
@@ -86,7 +86,7 @@ var _ = Describe("Bayes", func() {
 			It("ignores features that are not in training", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				f := []Feature{CookieF{"plain"}, ShapeF{"square"}}
+				f := []Featurer{CookieF{"plain"}, ShapeF{"square"}}
 
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
@@ -97,7 +97,7 @@ var _ = Describe("Bayes", func() {
 			It("breaks on unknown features", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				f := []Feature{UnknownF{}}
+				f := []Featurer{UnknownF{}}
 				_, err := nb.Predict(f)
 				Expect(err.Error()).To(Equal("All features are unknown"))
 			})
@@ -105,7 +105,7 @@ var _ = Describe("Bayes", func() {
 			It("ignores uknown features", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				f := []Feature{CookieF{"plain"}, UnknownF{}}
+				f := []Featurer{CookieF{"plain"}, UnknownF{}}
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
@@ -117,7 +117,7 @@ var _ = Describe("Bayes", func() {
 			It("calculcates with 3 labels", func() {
 				lfs := threeCookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Feature{CookieF{"chocolate"},
+				p, err := nb.Predict([]Featurer{CookieF{"chocolate"},
 					CookieF{"chocolate"}})
 				if err != nil {
 					panic(err)
@@ -130,7 +130,7 @@ var _ = Describe("Bayes", func() {
 		It("can calculate for 0 frequency", func() {
 			lfs := threeCookieJarsFeatures()
 			nb := TrainNB(lfs)
-			p, err := nb.Predict([]Feature{CookieF{"plain"}})
+			p, err := nb.Predict([]Featurer{CookieF{"plain"}})
 			if err != nil {
 				panic(err)
 			}
@@ -164,7 +164,7 @@ func (s ShapeF) Value() FeatureValue {
 	return FeatureValue(s.kind)
 }
 
-func featureName(f Feature) FeatureName {
+func featureName(f Featurer) FeatureName {
 	t := strings.Split(reflect.TypeOf(f).Name(), ".")
 	return FeatureName(t[len(t)-1])
 }
@@ -197,7 +197,7 @@ func cookieJarsFeatures() []LabeledFeatures {
 		f2 = ShapeF{"star"}
 		lf := LabeledFeatures{
 			Label:    Label("jar1"),
-			Features: []Feature{f1, f2},
+			Features: []Featurer{f1, f2},
 		}
 		lfs = append(lfs, lf)
 	}
@@ -210,7 +210,7 @@ func cookieJarsFeatures() []LabeledFeatures {
 		f2 = ShapeF{"round"}
 		lf := LabeledFeatures{
 			Label:    Label("jar2"),
-			Features: []Feature{f1, f2},
+			Features: []Featurer{f1, f2},
 		}
 		lfs = append(lfs, lf)
 	}
@@ -224,7 +224,7 @@ func threeCookieJarsFeatures() []LabeledFeatures {
 		f = CookieF{"chocolate"}
 		lf := LabeledFeatures{
 			Label:    Label("jar3"),
-			Features: []Feature{f},
+			Features: []Featurer{f},
 		}
 		lfs = append(lfs, lf)
 	}

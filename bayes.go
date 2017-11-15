@@ -19,7 +19,7 @@ type FeatureValue string
 
 // Feature is an interface of an "evidence" we use for training a NaiveBayes
 // classifier, or for the classification of an unknown entity.
-type Feature interface {
+type Featurer interface {
 	// Name defines an id of a feature
 	Name() FeatureName
 	// Value defines the value of a feature. The value set can be simple
@@ -46,7 +46,7 @@ type LabelFreq map[Label]float64
 // LabeledFeatures are data used for supervised training of NaiveBayes
 // algorithm.
 type LabeledFeatures struct {
-	Features []Feature
+	Features []Featurer
 	Label
 }
 
