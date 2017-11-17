@@ -98,11 +98,10 @@ func (nb *NaiveBayes) Dump() []byte {
 	return json
 }
 
-func (nb *NaiveBayes) Restore(dump []byte) *NaiveBayes {
+func (nb *NaiveBayes) Restore(dump []byte) {
 	r := bytes.NewReader(dump)
 	err := jsoniter.NewDecoder(r).Decode(nb)
 	if err != nil {
 		panic(err)
 	}
-	return nb
 }
