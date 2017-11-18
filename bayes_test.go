@@ -22,8 +22,7 @@ var _ = Describe("Bayes", func() {
 
 	Describe("TrainNB", func() {
 		It("takes training data and returns NB classifier", func() {
-			var lfs []LabeledFeatures
-			lfs = cookieJarsFeatures()
+			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
 			Expect(len(nb.Labels)).To(Equal(2))
 			plain := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("plain")]
@@ -46,17 +45,75 @@ var _ = Describe("Bayes", func() {
 		})
 	})
 
+	Describe("TrainingPrior", func() {
+		It("returns prior odds from training data", func() {
+			lfs := cookieJarsFeatures()
+			nb := TrainNB(lfs)
+			odds, err := nb.TrainingPrior(Label("jar1"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(odds).To(Equal(1.0))
+		})
+
+		It("returns error on unkown labels", func() {
+			lfs := cookieJarsFeatures()
+			nb := TrainNB(lfs)
+			_, err := nb.TrainingPrior(Label("helicopter"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Unkown label \"helicopter\""))
+		})
+
+		It("returns error if prior odds are infinite", func() {
+			nb := NewNaiveBayes()
+			l := Label("surething")
+			nb.LabelFreq[l] = 10.0
+			nb.Total = 10.0
+			_, err := nb.TrainingPrior(l)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Infinite prior odds"))
+		})
+	})
+
+	Describe("Odds", func() {
+		It("returns odds from frequencies", func() {
+			lfs := cookieJarsFeatures()
+			nb := TrainNB(lfs)
+			odds, err := Odds(Label("jar1"), nb.LabelFreq)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(odds).To(Equal(1.0))
+		})
+
+		It("breaks if frequences are not sensical", func() {
+			l := Label("surething")
+			lf := make(LabelFreq)
+			lf[l] = 10.0
+			_, err := Odds(Label("surething"), lf)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("Infinite prior odds"))
+		})
+	})
+
 	Describe("Predict()", func() {
 		Context("Two labels", func() {
-			It("Calculates posterior Probabilities", func() {
+			It("calculates posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
 				p, err := nb.Predict([]Featurer{CookieF{"plain"}})
-				if err != nil {
-					panic(err)
-				}
+				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
 				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+			})
+
+			It("calculates with new odds", func() {
+				lfs := cookieJarsFeatures()
+				nb := TrainNB(lfs)
+				lf := LabelFreq{
+					Label("jar1"): 1,
+					Label("jar2"): 6,
+				}
+				p, err := nb.Predict([]Featurer{CookieF{"plain"}}, WithPriorOdds(lf))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(p.MaxOdds).To(BeNumerically("~", 3.999, 0.1))
+				Expect(p.MaxLabel).To(Equal(Label("jar2")))
 			})
 
 			It("Calculates multiple posterior Probabilities", func() {

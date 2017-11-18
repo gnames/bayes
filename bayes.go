@@ -2,6 +2,8 @@ package bayes
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 
 	jsoniter "github.com/json-iterator/go"
@@ -50,6 +52,9 @@ type LabeledFeatures struct {
 	Label
 }
 
+// Likelihoods provide a likelihood of feature to appear for a particular label
+type Likelihoods map[Label]map[FeatureName]map[FeatureValue]float64
+
 // OptionNB is a type for options supplied to NaiveBayes classifier. It can
 // support either flags or parameterized options.
 type OptionNB func(*NaiveBayes) error
@@ -67,10 +72,8 @@ func NewNaiveBayes() *NaiveBayes {
 	return nb
 }
 
-/*
-NaiveBayes is a classifier for assigning an entity represented by its features
-to a label.
-*/
+// NaiveBayes is a classifier for assigning an entity represented by its
+// features to a label.
 type NaiveBayes struct {
 	// Labels is a list of "hypotheses", "classes", "categories", "labels".
 	// It contains all labels created by training.
@@ -90,6 +93,29 @@ type NaiveBayes struct {
 	Output            io.Writer `json:"-"`
 }
 
+// TrainingPrior returns prior odds calculated from the training set
+func (nb *NaiveBayes) TrainingPrior(l Label) (float64, error) {
+	return Odds(l, nb.LabelFreq)
+}
+
+// Odds returns odds for a label in a given label frequency distribution
+func Odds(l Label, lf LabelFreq) (float64, error) {
+	var total, freq float64
+	var ok bool
+	if freq, ok = lf[l]; !ok {
+		return 0.0, fmt.Errorf("Unkown label \"%s\"", l)
+	}
+	for _, v := range lf {
+		total += v
+	}
+	pL := freq / total
+	if pL == 1.0 || total == 0.0 {
+		return 0.0, errors.New("Infinite prior odds")
+	}
+	return pL / (1 - pL), nil
+}
+
+// Dump serializes a NaiveBayes object into a JSON format
 func (nb *NaiveBayes) Dump() []byte {
 	json, err := jsoniter.MarshalIndent(nb, "", "  ")
 	if err != nil {
@@ -98,6 +124,7 @@ func (nb *NaiveBayes) Dump() []byte {
 	return json
 }
 
+// Restore deserializes a JSON text into NaiveBayes object
 func (nb *NaiveBayes) Restore(dump []byte) {
 	r := bytes.NewReader(dump)
 	err := jsoniter.NewDecoder(r).Decode(nb)

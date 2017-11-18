@@ -10,6 +10,8 @@ type Posterior struct {
 	LabelOdds map[Label]float64
 	MaxLabel  Label
 	MaxOdds   float64
+	LabelFreq
+	Likelihoods
 }
 
 // WithPriorOdds allows dynamical change of prior odds used in calculations.
@@ -34,7 +36,6 @@ func (nb *NaiveBayes) Predict(fs []Featurer,
 	opts ...OptionNB) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
 	lf := nb.LabelFreq
-	total := nb.Total
 
 	for _, o := range opts {
 		err := o(nb)
@@ -43,39 +44,31 @@ func (nb *NaiveBayes) Predict(fs []Featurer,
 		}
 	}
 
-	if nb.currentLabelFreq != nil {
+	cf := nb.currentLabelFreq
+
+	if cf != nil && validLabelFreq(cf) {
 		lf = nb.currentLabelFreq
-		total = nb.currentLabelTotal
-		err := checkLabels(nb)
-		if err != nil {
-			return Posterior{}, err
-		}
 	}
 
 	l := len(lf)
-	switch {
-	case l < 2:
+	if l < 2 {
 		return Posterior{}, errors.New("Labels are empty")
-	default:
-		return multiPosterior(nb, fs, lf, total)
 	}
+	pr, err := multiPosterior(nb, fs, lf)
+	return pr, err
 }
 
-func checkLabels(nb *NaiveBayes) error {
-	err := errors.New("Empty or broken supplied prior odds")
-	err2 := errors.New("Training odds differ in quantity from supplied odds")
-	if nb.currentLabelFreq == nil || len(nb.currentLabelFreq) < 2 {
-		return err
-	} else if len(nb.currentLabelFreq) != len(nb.currentLabelFreq) {
-		return err2
-	}
-
-	for k1 := range nb.currentLabelFreq {
-		if _, ok := nb.LabelFreq[k1]; !ok {
-			return fmt.Errorf("Label %s does not exist in training set", k1)
+func validLabelFreq(lf LabelFreq) bool {
+	var count int
+	for _, v := range lf {
+		if v > 0 {
+			count++
+			if count > 1 {
+				return true
+			}
 		}
 	}
-	return nil
+	return false
 }
 
 func noSuchFeature(f Featurer, nb *NaiveBayes) bool {
@@ -90,19 +83,30 @@ func noSuchFeature(f Featurer, nb *NaiveBayes) bool {
 }
 
 func multiPosterior(nb *NaiveBayes, fs []Featurer,
-	lf LabelFreq, total float64) (Posterior, error) {
+	lf LabelFreq) (Posterior, error) {
 	var MaxLabel Label
 	var MaxOdds float64
 	oddsPost := make(map[Label]float64)
+	likelihoods := make(Likelihoods)
 	for _, label := range nb.Labels {
-		oddsPost[label] = oddsPrior(lf, label, total)
+		odds, err := Odds(label, lf)
+		if err != nil {
+			return Posterior{}, fmt.Errorf("Cannot calculate odds: %s", err.Error())
+		}
+		oddsPost[label] = odds
+		likelihoods[label] = make(map[FeatureName]map[FeatureValue]float64)
+		likelihoods[label][FeatureName("PriorOdds")] =
+			map[FeatureValue]float64{FeatureValue("true"): odds}
 		i := 0
 		for _, f := range fs {
 			if noSuchFeature(f, nb) {
 				continue
 			}
+			lh := likelihood(nb, f, label)
+			likelihoods[label][f.Name()] = map[FeatureValue]float64{f.Value(): lh}
+
 			i++
-			oddsPost[label] *= likelihood(nb, f, label)
+			oddsPost[label] *= lh
 			if oddsPost[label] > MaxOdds {
 				MaxOdds = oddsPost[label]
 				MaxLabel = label
@@ -112,7 +116,7 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 			return Posterior{}, errors.New("All features are unknown")
 		}
 	}
-	p := Posterior{oddsPost, MaxLabel, MaxOdds}
+	p := Posterior{oddsPost, MaxLabel, MaxOdds, lf, likelihoods}
 	return p, nil
 }
 
@@ -121,6 +125,7 @@ func likelihood(nb *NaiveBayes, feature Featurer, label Label) float64 {
 	name := feature.Name()
 	value := feature.Value()
 	countFeature := nb.FeatureFreq[name][value][label]
+
 	countRest := (nb.FeatureTotal[name][value] - countFeature)
 	pFeature := countFeature / nb.LabelFreq[label]
 
@@ -135,9 +140,4 @@ func likelihood(nb *NaiveBayes, feature Featurer, label Label) float64 {
 
 	pRest := countRest / (nb.Total - nb.LabelFreq[label])
 	return pFeature / pRest
-}
-
-func oddsPrior(lf LabelFreq, label Label, total float64) float64 {
-	prob := lf[label] / total
-	return prob / (1 - prob)
 }
