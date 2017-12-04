@@ -82,6 +82,17 @@ var _ = Describe("Bayes", func() {
 			Expect(odds).To(Equal(1.0))
 		})
 
+		It("calculates 'local' frequences correctly", func() {
+			l1 := Label("lots")
+			l2 := Label("little")
+			lf := make(LabelFreq)
+			lf[l1] = 9.0
+			lf[l2] = 1.0
+			odds, err := Odds(Label("lots"), lf)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(odds).To(BeNumerically("~", 9.00, 0.01))
+		})
+
 		It("breaks if frequences are not sensical", func() {
 			l := Label("surething")
 			lf := make(LabelFreq)
