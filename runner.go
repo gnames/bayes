@@ -7,8 +7,8 @@ import (
 
 // Posterior contains outcomes from NativeBayes classifier
 type Posterior struct {
-	LabelOdds map[Label]float64
-	MaxLabel  Label
+	LabelOdds map[Labeler]float64
+	MaxLabel  Labeler
 	MaxOdds   float64
 	LabelFreq
 	Likelihoods
@@ -84,9 +84,9 @@ func noSuchFeature(f Featurer, nb *NaiveBayes) bool {
 
 func multiPosterior(nb *NaiveBayes, fs []Featurer,
 	lf LabelFreq) (Posterior, error) {
-	var MaxLabel Label
+	var MaxLabel Labeler
 	var MaxOdds float64
-	oddsPost := make(map[Label]float64)
+	oddsPost := make(map[Labeler]float64)
 	likelihoods := make(Likelihoods)
 	for _, label := range nb.Labels {
 		odds, err := Odds(label, lf)
@@ -120,7 +120,7 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 	return p, nil
 }
 
-func likelihood(nb *NaiveBayes, feature Featurer, label Label) float64 {
+func likelihood(nb *NaiveBayes, feature Featurer, label Labeler) float64 {
 	smooth := 1.0
 	name := feature.Name()
 	value := feature.Value()

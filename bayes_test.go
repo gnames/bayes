@@ -12,12 +12,11 @@ import (
 
 var _ = Describe("Bayes", func() {
 	Describe("NewNaiveBayes()", func() {
-		It("Init classifier with reasonable defaults", func() {
+		It("initialises classifier with reasonable defaults", func() {
 			nb := NewNaiveBayes()
 			Expect(len(nb.Labels)).To(Equal(0))
 			Expect(nb).ToNot(Equal(NaiveBayes{}))
 		})
-
 	})
 
 	Describe("TrainNB", func() {
@@ -26,15 +25,15 @@ var _ = Describe("Bayes", func() {
 			nb := TrainNB(lfs)
 			Expect(len(nb.Labels)).To(Equal(2))
 			plain := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("plain")]
-			Expect(plain[Label("jar1")]).To(Equal(30.0))
+			Expect(plain[Jar1]).To(Equal(30.0))
 			chocolate := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("chocolate")]
-			Expect(chocolate[Label("jar2")]).To(Equal(20.0))
-			Expect(nb.LabelFreq[Label("jar1")]).To(Equal(40.0))
+			Expect(chocolate[Jar2]).To(Equal(20.0))
+			Expect(nb.LabelFreq[Jar1]).To(Equal(40.0))
 		})
 	})
 
 	Describe("Dump/Restore", func() {
-		It("Dumps the content of NaiveBayes object to json file", func() {
+		It("dumps the content of NaiveBayes object to json file", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
 			json := nb.Dump()
@@ -42,6 +41,11 @@ var _ = Describe("Bayes", func() {
 			nb2 := NewNaiveBayes()
 			nb2.Restore(json)
 			Expect(nb2.Total).To(Equal(80.0))
+			Expect(len(nb2.Labels)).To(Equal(2))
+			Expect(nb2.LabelFreq[Jar1]).To(Equal(40.0))
+			Expect(nb2.
+				FeatureFreq[FeatureName("CookieF")][FeatureValue("chocolate")][Jar1]).
+				To(Equal(10.0))
 		})
 	})
 
@@ -49,7 +53,7 @@ var _ = Describe("Bayes", func() {
 		It("returns prior odds from training data", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
-			odds, err := nb.TrainingPrior(Label("jar1"))
+			odds, err := nb.TrainingPrior(Jar1)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(odds).To(Equal(1.0))
 		})
@@ -57,14 +61,14 @@ var _ = Describe("Bayes", func() {
 		It("returns error on unkown labels", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
-			_, err := nb.TrainingPrior(Label("helicopter"))
+			_, err := nb.TrainingPrior(Helicopter)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("Unkown label \"helicopter\""))
+			Expect(err.Error()).To(Equal("Unkown label \"Helicopter\""))
 		})
 
 		It("returns error if prior odds are infinite", func() {
 			nb := NewNaiveBayes()
-			l := Label("surething")
+			l := Surething
 			nb.LabelFreq[l] = 10.0
 			nb.Total = 10.0
 			_, err := nb.TrainingPrior(l)
@@ -77,27 +81,27 @@ var _ = Describe("Bayes", func() {
 		It("returns odds from frequencies", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
-			odds, err := Odds(Label("jar1"), nb.LabelFreq)
+			odds, err := Odds(Jar1, nb.LabelFreq)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(odds).To(Equal(1.0))
 		})
 
 		It("calculates 'local' frequences correctly", func() {
-			l1 := Label("lots")
-			l2 := Label("little")
+			l1 := Lots
+			l2 := Little
 			lf := make(LabelFreq)
 			lf[l1] = 9.0
 			lf[l2] = 1.0
-			odds, err := Odds(Label("lots"), lf)
+			odds, err := Odds(Lots, lf)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(odds).To(BeNumerically("~", 9.00, 0.01))
 		})
 
 		It("breaks if frequences are not sensical", func() {
-			l := Label("surething")
+			l := Surething
 			lf := make(LabelFreq)
 			lf[l] = 10.0
-			_, err := Odds(Label("surething"), lf)
+			_, err := Odds(Surething, lf)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("Infinite prior odds"))
 		})
@@ -111,20 +115,20 @@ var _ = Describe("Bayes", func() {
 				p, err := nb.Predict([]Featurer{CookieF{"plain"}})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
-				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 
 			It("calculates with new odds", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
 				lf := LabelFreq{
-					Label("jar1"): 1,
-					Label("jar2"): 6,
+					Jar1: 1,
+					Jar2: 6,
 				}
 				p, err := nb.Predict([]Featurer{CookieF{"plain"}}, WithPriorOdds(lf))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(BeNumerically("~", 3.999, 0.1))
-				Expect(p.MaxLabel).To(Equal(Label("jar2")))
+				Expect(p.MaxLabel).To(Equal(Jar2))
 			})
 
 			It("Calculates multiple posterior Probabilities", func() {
@@ -135,7 +139,7 @@ var _ = Describe("Bayes", func() {
 					panic(err)
 				}
 				Expect(p.MaxOdds).To(Equal(2.25))
-				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 
 			It("compensates infinite odds with crude smoothing", func() {
@@ -147,7 +151,7 @@ var _ = Describe("Bayes", func() {
 				if err != nil {
 					panic(err)
 				}
-				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxLabel).To(Equal(Jar1))
 				Expect(p.MaxOdds).To(BeNumerically("~", 20, 1))
 			})
 
@@ -158,7 +162,7 @@ var _ = Describe("Bayes", func() {
 
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxLabel).To(Equal(Jar1))
 				Expect(p.MaxOdds).To(Equal(1.5))
 			})
 
@@ -177,7 +181,7 @@ var _ = Describe("Bayes", func() {
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
-				Expect(p.MaxLabel).To(Equal(Label("jar1")))
+				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 		})
 
@@ -190,7 +194,7 @@ var _ = Describe("Bayes", func() {
 				if err != nil {
 					panic(err)
 				}
-				Expect(p.MaxLabel).To(Equal(Label("jar3")))
+				Expect(p.MaxLabel).To(Equal(Jar3))
 				Expect(p.MaxOdds).To(BeNumerically("~", 3.555, 0.001))
 			})
 		})
@@ -202,7 +206,7 @@ var _ = Describe("Bayes", func() {
 			if err != nil {
 				panic(err)
 			}
-			Expect(p.MaxLabel).To(Equal(Label("jar1")))
+			Expect(p.MaxLabel).To(Equal(Jar1))
 			Expect(p.MaxOdds).To(BeNumerically("~", 1.499, 0.01))
 		})
 	})
@@ -264,7 +268,7 @@ func cookieJarsFeatures() []LabeledFeatures {
 		}
 		f2 = ShapeF{"star"}
 		lf := LabeledFeatures{
-			Label:    Label("jar1"),
+			Label:    Jar1,
 			Features: []Featurer{f1, f2},
 		}
 		lfs = append(lfs, lf)
@@ -277,7 +281,7 @@ func cookieJarsFeatures() []LabeledFeatures {
 		}
 		f2 = ShapeF{"round"}
 		lf := LabeledFeatures{
-			Label:    Label("jar2"),
+			Label:    Jar2,
 			Features: []Featurer{f1, f2},
 		}
 		lfs = append(lfs, lf)
@@ -291,7 +295,7 @@ func threeCookieJarsFeatures() []LabeledFeatures {
 	for i := 1; i <= 40; i++ {
 		f = CookieF{"chocolate"}
 		lf := LabeledFeatures{
-			Label:    Label("jar3"),
+			Label:    Jar3,
 			Features: []Featurer{f},
 		}
 		lfs = append(lfs, lf)

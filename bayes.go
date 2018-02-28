@@ -1,17 +1,10 @@
 package bayes
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
-
-	jsoniter "github.com/json-iterator/go"
 )
-
-// Label is a string representation of a "hypothesis" or "class" the NaiveBayes
-// is aware about.
-type Label string
 
 // FeatureName is a name of a Feature
 type FeatureName string
@@ -31,7 +24,7 @@ type Featurer interface {
 
 // FeatureFreq is a map for collecting frequencies of a training feature set.
 // FeatureFreq is used for calculating Likelihoods of a NaiveBayes classifier.
-type FeatureFreq map[FeatureName]map[FeatureValue]map[Label]float64
+type FeatureFreq map[FeatureName]map[FeatureValue]map[Labeler]float64
 
 // FeatureTotal is used for calculating multinomial likelihoods. For example
 // if we are interested in calculating likelihood of feature `f` its
@@ -43,17 +36,18 @@ type FeatureTotal map[FeatureName]map[FeatureValue]float64
 
 // LabelFreq is a collection of counts for every Label in the training dataset.
 // this information allows to calculate prior odds for a Label.
-type LabelFreq map[Label]float64
+type LabelFreq map[Labeler]float64
 
 // LabeledFeatures are data used for supervised training of NaiveBayes
 // algorithm.
 type LabeledFeatures struct {
 	Features []Featurer
-	Label
+	Label    Labeler
 }
 
-// Likelihoods provide a likelihood of feature to appear for a particular label
-type Likelihoods map[Label]map[FeatureName]map[FeatureValue]float64
+// Likelihoods provide a likelihood of a feature to appear for a
+// particular label.
+type Likelihoods map[Labeler]map[FeatureName]map[FeatureValue]float64
 
 // OptionNB is a type for options supplied to NaiveBayes classifier. It can
 // support either flags or parameterized options.
@@ -65,8 +59,8 @@ type OptionNB func(*NaiveBayes) error
 // Currently constructor supports the following options:
 func NewNaiveBayes() *NaiveBayes {
 	nb := &NaiveBayes{
-		LabelFreq:    make(map[Label]float64),
-		FeatureFreq:  make(map[FeatureName]map[FeatureValue]map[Label]float64),
+		LabelFreq:    make(map[Labeler]float64),
+		FeatureFreq:  make(map[FeatureName]map[FeatureValue]map[Labeler]float64),
 		FeatureTotal: make(map[FeatureName]map[FeatureValue]float64),
 	}
 	return nb
@@ -77,11 +71,11 @@ func NewNaiveBayes() *NaiveBayes {
 type NaiveBayes struct {
 	// Labels is a list of "hypotheses", "classes", "categories", "labels".
 	// It contains all labels created by training.
-	Labels []Label `json:"labels"`
+	Labels []Labeler `json:"-"`
 	// FeatureFreq keeps count of all the features for the labels.
-	FeatureFreq `json:"feature_freq"`
+	FeatureFreq `json:"-"`
 	// LabelFreq keeps counts of the tokens belonging to each label
-	LabelFreq `json:"label_freq"`
+	LabelFreq `json:"-"`
 	// FeatureTotal keeps total count of tokens for each feature.
 	FeatureTotal `json:"feature_total"`
 	// Total is a total number of tokens used for training.
@@ -94,12 +88,12 @@ type NaiveBayes struct {
 }
 
 // TrainingPrior returns prior odds calculated from the training set
-func (nb *NaiveBayes) TrainingPrior(l Label) (float64, error) {
+func (nb *NaiveBayes) TrainingPrior(l Labeler) (float64, error) {
 	return Odds(l, nb.LabelFreq)
 }
 
 // Odds returns odds for a label in a given label frequency distribution
-func Odds(l Label, lf LabelFreq) (float64, error) {
+func Odds(l Labeler, lf LabelFreq) (float64, error) {
 	var total, freq float64
 	var ok bool
 	if freq, ok = lf[l]; !ok {
@@ -113,22 +107,4 @@ func Odds(l Label, lf LabelFreq) (float64, error) {
 		return 0.0, errors.New("Infinite prior odds")
 	}
 	return pL / (1 - pL), nil
-}
-
-// Dump serializes a NaiveBayes object into a JSON format
-func (nb *NaiveBayes) Dump() []byte {
-	json, err := jsoniter.MarshalIndent(nb, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	return json
-}
-
-// Restore deserializes a JSON text into NaiveBayes object
-func (nb *NaiveBayes) Restore(dump []byte) {
-	r := bytes.NewReader(dump)
-	err := jsoniter.NewDecoder(r).Decode(nb)
-	if err != nil {
-		panic(err)
-	}
 }

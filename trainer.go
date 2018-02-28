@@ -24,10 +24,10 @@ func trainFeatures(nb *NaiveBayes, lf LabeledFeatures) {
 		name := v.Name()
 		value := v.Value()
 		if _, ok := nb.FeatureFreq[name]; !ok {
-			nb.FeatureFreq[name] = make(map[FeatureValue]map[Label]float64)
+			nb.FeatureFreq[name] = make(map[FeatureValue]map[Labeler]float64)
 		}
 		if _, ok := nb.FeatureFreq[name][value]; !ok {
-			nb.FeatureFreq[name][value] = make(map[Label]float64)
+			nb.FeatureFreq[name][value] = make(map[Labeler]float64)
 		}
 		nb.FeatureFreq[name][value][lf.Label]++
 	}
