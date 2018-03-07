@@ -1,6 +1,7 @@
 package bayes_test
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -27,7 +28,7 @@ var _ = Describe("Bayes", func() {
 			plain := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("plain")]
 			Expect(plain[Jar1]).To(Equal(30.0))
 			chocolate := nb.FeatureFreq[FeatureName("CookieF")][FeatureValue("chocolate")]
-			Expect(chocolate[Jar2]).To(Equal(20.0))
+			Expect(chocolate[Jar2]).To(Equal(15.0))
 			Expect(nb.LabelFreq[Jar1]).To(Equal(40.0))
 		})
 	})
@@ -40,7 +41,7 @@ var _ = Describe("Bayes", func() {
 			Expect(string(json)[0:15]).To(Equal("{\n  \"labels\": ["))
 			nb2 := NewNaiveBayes()
 			nb2.Restore(json)
-			Expect(nb2.Total).To(Equal(80.0))
+			Expect(nb2.Total).To(Equal(70.0))
 			Expect(len(nb2.Labels)).To(Equal(2))
 			Expect(nb2.LabelFreq[Jar1]).To(Equal(40.0))
 			Expect(nb2.
@@ -55,7 +56,7 @@ var _ = Describe("Bayes", func() {
 			nb := TrainNB(lfs)
 			odds, err := nb.TrainingPrior(Jar1)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(odds).To(Equal(1.0))
+			Expect(odds).To(BeNumerically("~", 1.333, 0.01))
 		})
 
 		It("returns error on unkown labels", func() {
@@ -83,7 +84,7 @@ var _ = Describe("Bayes", func() {
 			nb := TrainNB(lfs)
 			odds, err := Odds(Jar1, nb.LabelFreq)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(odds).To(Equal(1.0))
+			Expect(odds).To(BeNumerically("~", 1.33, 0.01))
 		})
 
 		It("calculates 'local' frequences correctly", func() {
@@ -114,7 +115,7 @@ var _ = Describe("Bayes", func() {
 				nb := TrainNB(lfs)
 				p, err := nb.Predict([]Featurer{CookieF{"plain"}})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(p.MaxOdds).To(Equal(1.5))
+				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 
@@ -131,14 +132,31 @@ var _ = Describe("Bayes", func() {
 				Expect(p.MaxLabel).To(Equal(Jar2))
 			})
 
+			It("calculates without prior odds", func() {
+				lfs := cookieJarsFeatures()
+				nb := TrainNB(lfs)
+				p, err := nb.Predict([]Featurer{CookieF{"plain"}},
+					IgnorePriorOdds)
+				fmt.Println(p.Likelihoods)
+				fmt.Println()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(p.MaxOdds).To(Equal(1.5))
+				Expect(p.MaxLabel).To(Equal(Jar1))
+				p, _ = nb.Predict([]Featurer{CookieF{"plain"}})
+				fmt.Println(p.Likelihoods)
+				Expect(p.MaxOdds).To(Equal(2.0))
+				Expect(p.MaxLabel).To(Equal(Jar1))
+			})
+
 			It("Calculates multiple posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Featurer{CookieF{"plain"}, CookieF{"plain"}})
+				p, err := nb.Predict([]Featurer{CookieF{"plain"},
+					CookieF{"plain"}})
 				if err != nil {
 					panic(err)
 				}
-				Expect(p.MaxOdds).To(Equal(2.25))
+				Expect(p.MaxOdds).To(Equal(3.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 
@@ -163,7 +181,7 @@ var _ = Describe("Bayes", func() {
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxLabel).To(Equal(Jar1))
-				Expect(p.MaxOdds).To(Equal(1.5))
+				Expect(p.MaxOdds).To(Equal(2.0))
 			})
 
 			It("breaks on unknown features", func() {
@@ -180,7 +198,7 @@ var _ = Describe("Bayes", func() {
 				f := []Featurer{CookieF{"plain"}, UnknownF{}}
 				p, err := nb.Predict(f)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(p.MaxOdds).To(Equal(1.5))
+				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
 		})
@@ -195,7 +213,7 @@ var _ = Describe("Bayes", func() {
 					panic(err)
 				}
 				Expect(p.MaxLabel).To(Equal(Jar3))
-				Expect(p.MaxOdds).To(BeNumerically("~", 3.555, 0.001))
+				Expect(p.MaxOdds).To(BeNumerically("~", 4.479, 0.001))
 			})
 		})
 
@@ -207,7 +225,7 @@ var _ = Describe("Bayes", func() {
 				panic(err)
 			}
 			Expect(p.MaxLabel).To(Equal(Jar1))
-			Expect(p.MaxOdds).To(BeNumerically("~", 1.499, 0.01))
+			Expect(p.MaxOdds).To(BeNumerically("~", 2.0, 0.01))
 		})
 	})
 })
@@ -253,8 +271,10 @@ func (u UnknownF) Value() FeatureValue {
 
 // cookieJarsFeatures implements features from
 // https://en.wikipedia.org/wiki/Bayesian_inference
-// there are 2 jars with cookies. Jar1 has 10 chocolate and 20 vanilla cookies,
-// jar2 has 20 of each. If a cookie is randomly taken from a random jar, what
+// We change number of cookies in the second jar to 30, so
+// prior odds are not 1:1.
+// there are 2 jars with cookies. Jar1 has 10 chocolate and 30 vanilla cookies,
+// jar2 has 15 of each. If a cookie is randomly taken from a random jar, what
 // is a probability it came from the jar1?
 func cookieJarsFeatures() []LabeledFeatures {
 	var f1 CookieF
@@ -274,9 +294,9 @@ func cookieJarsFeatures() []LabeledFeatures {
 		lfs = append(lfs, lf)
 	}
 
-	for i := 1; i <= 40; i++ {
+	for i := 1; i <= 30; i++ {
 		f1 = CookieF{"chocolate"}
-		if i > 20 {
+		if i > 15 {
 			f1 = CookieF{"plain"}
 		}
 		f2 = ShapeF{"round"}

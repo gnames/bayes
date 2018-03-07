@@ -29,12 +29,20 @@ func WithPriorOdds(lf LabelFreq) func(*NaiveBayes) error {
 	}
 }
 
+// IgnorePriorOdds might be needed if it is a multistep Bayes calculation and
+// PriorOdds already are accounted for.
+func IgnorePriorOdds(nb *NaiveBayes) error {
+	nb.IgnorePriorOdds = true
+	return nil
+}
+
 // Predict is a general function that runs NaiveBayes classifier against
 // trained set. It can take a different PriorOdds value to influence
 // calculation of the Posterior Odds.
 func (nb *NaiveBayes) Predict(fs []Featurer,
 	opts ...OptionNB) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
+	nb.IgnorePriorOdds = false
 	lf := nb.LabelFreq
 
 	for _, o := range opts {
@@ -93,10 +101,16 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 		if err != nil {
 			return Posterior{}, fmt.Errorf("Cannot calculate odds: %s", err.Error())
 		}
-		oddsPost[label] = odds
+		oddsPost[label] = 1
+		if !nb.IgnorePriorOdds {
+			oddsPost[label] = odds
+		}
 		likelihoods[label] = make(map[FeatureName]map[FeatureValue]float64)
-		likelihoods[label][FeatureName("PriorOdds")] =
-			map[FeatureValue]float64{FeatureValue("true"): odds}
+		if !nb.IgnorePriorOdds {
+			likelihoods[label][FeatureName("PriorOdds")] =
+				map[FeatureValue]float64{FeatureValue("true"): odds}
+		}
+
 		i := 0
 		for _, f := range fs {
 			if noSuchFeature(f, nb) {

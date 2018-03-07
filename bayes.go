@@ -59,9 +59,10 @@ type OptionNB func(*NaiveBayes) error
 // Currently constructor supports the following options:
 func NewNaiveBayes() *NaiveBayes {
 	nb := &NaiveBayes{
-		LabelFreq:    make(map[Labeler]float64),
-		FeatureFreq:  make(map[FeatureName]map[FeatureValue]map[Labeler]float64),
-		FeatureTotal: make(map[FeatureName]map[FeatureValue]float64),
+		LabelFreq:       make(map[Labeler]float64),
+		FeatureFreq:     make(map[FeatureName]map[FeatureValue]map[Labeler]float64),
+		FeatureTotal:    make(map[FeatureName]map[FeatureValue]float64),
+		IgnorePriorOdds: false,
 	}
 	return nb
 }
@@ -80,6 +81,9 @@ type NaiveBayes struct {
 	FeatureTotal `json:"feature_total"`
 	// Total is a total number of tokens used for training.
 	Total float64 `json:"total"`
+	// IgnorePriorOdds is set true if prior odds do not need to be used in the
+	// returning result.
+	IgnorePriorOdds bool
 	// currentLabelFreq keeps count for dynamically supplied labels frequencies
 	currentLabelFreq LabelFreq
 	// currentLabelTotal keeps total count of all supplied labels
