@@ -29,20 +29,12 @@ func WithPriorOdds(lf LabelFreq) func(*NaiveBayes) error {
 	}
 }
 
-// IgnorePriorOdds might be needed if it is a multistep Bayes calculation and
-// PriorOdds already are accounted for.
-func IgnorePriorOdds(nb *NaiveBayes) error {
-	nb.IgnorePriorOdds = true
-	return nil
-}
-
 // Predict is a general function that runs NaiveBayes classifier against
 // trained set. It can take a different PriorOdds value to influence
 // calculation of the Posterior Odds.
 func (nb *NaiveBayes) Predict(fs []Featurer,
 	opts ...OptionNB) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
-	nb.IgnorePriorOdds = false
 	lf := nb.LabelFreq
 
 	for _, o := range opts {
@@ -101,15 +93,10 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 		if err != nil {
 			return Posterior{}, fmt.Errorf("Cannot calculate odds: %s", err.Error())
 		}
-		oddsPost[label] = 1
-		if !nb.IgnorePriorOdds {
-			oddsPost[label] = odds
-		}
+		oddsPost[label] = odds
 		likelihoods[label] = make(map[FeatureName]map[FeatureValue]float64)
-		if !nb.IgnorePriorOdds {
-			likelihoods[label][FeatureName("PriorOdds")] =
-				map[FeatureValue]float64{FeatureValue("true"): odds}
-		}
+		likelihoods[label][FeatureName("PriorOdds")] =
+			map[FeatureValue]float64{FeatureValue("true"): odds}
 
 		i := 0
 		for _, f := range fs {
@@ -121,13 +108,13 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 
 			i++
 			oddsPost[label] *= lh
-			if oddsPost[label] > MaxOdds {
-				MaxOdds = oddsPost[label]
-				MaxLabel = label
-			}
 		}
 		if i == 0 {
 			return Posterior{}, errors.New("All features are unknown")
+		}
+		if oddsPost[label] > MaxOdds {
+			MaxOdds = oddsPost[label]
+			MaxLabel = label
 		}
 	}
 	p := Posterior{oddsPost, MaxLabel, MaxOdds, lf, likelihoods}
@@ -140,8 +127,7 @@ func likelihood(nb *NaiveBayes, feature Featurer, label Labeler) float64 {
 	value := feature.Value()
 	countFeature := nb.FeatureFreq[name][value][label]
 
-	countRest := (nb.FeatureTotal[name][value] - countFeature)
-	pFeature := countFeature / nb.LabelFreq[label]
+	countRest := nb.FeatureTotal[name][value] - countFeature
 
 	// crude smoothing
 	if countFeature == 0 {
@@ -152,6 +138,10 @@ func likelihood(nb *NaiveBayes, feature Featurer, label Labeler) float64 {
 	}
 	// end crude smoothing
 
-	pRest := countRest / (nb.Total - nb.LabelFreq[label])
-	return pFeature / pRest
+	pFeature := countFeature / nb.LabelFreq[label]
+
+	totalRest := nb.Total - nb.LabelFreq[label]
+	pRest := countRest / totalRest
+	res := pFeature / pRest
+	return res
 }
