@@ -1,7 +1,6 @@
 package bayes_test
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -137,13 +136,10 @@ var _ = Describe("Bayes", func() {
 				nb := TrainNB(lfs)
 				p, err := nb.Predict([]Featurer{CookieF{"plain"}},
 					IgnorePriorOdds)
-				fmt.Println(p.Likelihoods)
-				fmt.Println()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 				p, _ = nb.Predict([]Featurer{CookieF{"plain"}})
-				fmt.Println(p.Likelihoods)
 				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
