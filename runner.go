@@ -141,12 +141,14 @@ func likelihood(nb *NaiveBayes, feature Featurer, label Labeler) float64 {
 	countFeature := nb.FeatureFreq[name][value][label]
 
 	countRest := (nb.FeatureTotal[name][value] - countFeature)
-	pFeature := countFeature / nb.LabelFreq[label]
 
 	// crude smoothing
 	if countFeature == 0 {
 		countFeature = smooth
 	}
+
+	pFeature := countFeature / nb.LabelFreq[label]
+
 	if countRest == 0 {
 		countRest = smooth
 	}
