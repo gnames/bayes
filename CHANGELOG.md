@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add [#15]: golang module support
 
 ## [v0.1.0]
 
@@ -25,6 +26,7 @@ This document follows [changelog guidelines]
 
 [v0.1.0]: https://github.com/gnames/bayes/tree/v0.1.0
 
+[#15]: https://github.com/gnames/bayes/issues/15
 [#14]: https://github.com/gnames/bayes/issues/14
 [#13]: https://github.com/gnames/bayes/issues/13
 [#11]: https://github.com/gnames/bayes/issues/11
