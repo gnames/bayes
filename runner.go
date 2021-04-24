@@ -36,11 +36,13 @@ func IgnorePriorOdds(nb *NaiveBayes) error {
 	return nil
 }
 
-// Predict is a general function that runs NaiveBayes classifier against
+// PosteriorOdds is a general function that runs NaiveBayes classifier against
 // trained set. It can take a different PriorOdds value to influence
 // calculation of the Posterior Odds.
-func (nb *NaiveBayes) Predict(fs []Featurer,
-	opts ...OptionNB) (Posterior, error) {
+func (nb *NaiveBayes) PosteriorOdds(
+	fs []Featurer,
+	opts ...OptionNB,
+) (Posterior, error) {
 	nb.currentLabelFreq = LabelFreq(nil)
 	nb.IgnorePriorOdds = false
 	lf := nb.LabelFreq
@@ -113,24 +115,33 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 
 		i := 0
 		for _, f := range fs {
+			// features are missing if training data did not have
+			// their value.
 			if noSuchFeature(f, nb) {
 				continue
 			}
+
 			lh := likelihood(nb, f, label)
 			likelihoods[label][f.Name()] = map[FeatureValue]float64{f.Value(): lh}
 
 			i++
 			oddsPost[label] *= lh
-			if oddsPost[label] > MaxOdds {
-				MaxOdds = oddsPost[label]
-				MaxLabel = label
-			}
 		}
 		if i == 0 {
 			return Posterior{}, errors.New("All features are unknown")
 		}
+		if oddsPost[label] > MaxOdds {
+			MaxOdds = oddsPost[label]
+			MaxLabel = label
+		}
 	}
-	p := Posterior{oddsPost, MaxLabel, MaxOdds, lf, likelihoods}
+	p := Posterior{
+		LabelOdds:   oddsPost,
+		MaxLabel:    MaxLabel,
+		MaxOdds:     MaxOdds,
+		LabelFreq:   lf,
+		Likelihoods: likelihoods,
+	}
 	return p, nil
 }
 

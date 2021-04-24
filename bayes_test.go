@@ -37,7 +37,7 @@ var _ = Describe("Bayes", func() {
 			lfs := cookieJarsFeatures()
 			nb := TrainNB(lfs)
 			json := nb.Dump()
-			Expect(string(json)[0:15]).To(Equal("{\n  \"labels\": ["))
+			Expect(string(json)[0:15]).To(Equal("{\"labels\":[\"Jar"))
 			nb2 := NewNaiveBayes()
 			nb2.Restore(json)
 			Expect(nb2.Total).To(Equal(70.0))
@@ -112,7 +112,7 @@ var _ = Describe("Bayes", func() {
 			It("calculates posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Featurer{CookieF{"plain"}})
+				p, err := nb.PosteriorOdds([]Featurer{CookieF{"plain"}})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
@@ -125,7 +125,7 @@ var _ = Describe("Bayes", func() {
 					Jar1: 1,
 					Jar2: 6,
 				}
-				p, err := nb.Predict([]Featurer{CookieF{"plain"}}, WithPriorOdds(lf))
+				p, err := nb.PosteriorOdds([]Featurer{CookieF{"plain"}}, WithPriorOdds(lf))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(BeNumerically("~", 3.999, 0.1))
 				Expect(p.MaxLabel).To(Equal(Jar2))
@@ -134,12 +134,12 @@ var _ = Describe("Bayes", func() {
 			It("calculates without prior odds", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Featurer{CookieF{"plain"}},
+				p, err := nb.PosteriorOdds([]Featurer{CookieF{"plain"}},
 					IgnorePriorOdds)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(1.5))
 				Expect(p.MaxLabel).To(Equal(Jar1))
-				p, _ = nb.Predict([]Featurer{CookieF{"plain"}})
+				p, _ = nb.PosteriorOdds([]Featurer{CookieF{"plain"}})
 				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
 			})
@@ -147,7 +147,7 @@ var _ = Describe("Bayes", func() {
 			It("Calculates multiple posterior Probabilities", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Featurer{CookieF{"plain"},
+				p, err := nb.PosteriorOdds([]Featurer{CookieF{"plain"},
 					CookieF{"plain"}})
 				if err != nil {
 					panic(err)
@@ -161,7 +161,7 @@ var _ = Describe("Bayes", func() {
 				nb := TrainNB(lfs)
 				f := []Featurer{CookieF{"chocolate"}, ShapeF{"star"}}
 
-				p, err := nb.Predict(f)
+				p, err := nb.PosteriorOdds(f)
 				if err != nil {
 					panic(err)
 				}
@@ -174,7 +174,7 @@ var _ = Describe("Bayes", func() {
 				nb := TrainNB(lfs)
 				f := []Featurer{CookieF{"plain"}, ShapeF{"square"}}
 
-				p, err := nb.Predict(f)
+				p, err := nb.PosteriorOdds(f)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxLabel).To(Equal(Jar1))
 				Expect(p.MaxOdds).To(Equal(2.0))
@@ -184,7 +184,7 @@ var _ = Describe("Bayes", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
 				f := []Featurer{UnknownF{}}
-				_, err := nb.Predict(f)
+				_, err := nb.PosteriorOdds(f)
 				Expect(err.Error()).To(Equal("All features are unknown"))
 			})
 
@@ -192,7 +192,7 @@ var _ = Describe("Bayes", func() {
 				lfs := cookieJarsFeatures()
 				nb := TrainNB(lfs)
 				f := []Featurer{CookieF{"plain"}, UnknownF{}}
-				p, err := nb.Predict(f)
+				p, err := nb.PosteriorOdds(f)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(p.MaxOdds).To(Equal(2.0))
 				Expect(p.MaxLabel).To(Equal(Jar1))
@@ -203,7 +203,7 @@ var _ = Describe("Bayes", func() {
 			It("calculcates with 3 labels", func() {
 				lfs := threeCookieJarsFeatures()
 				nb := TrainNB(lfs)
-				p, err := nb.Predict([]Featurer{CookieF{"chocolate"},
+				p, err := nb.PosteriorOdds([]Featurer{CookieF{"chocolate"},
 					CookieF{"chocolate"}})
 				if err != nil {
 					panic(err)
@@ -216,7 +216,7 @@ var _ = Describe("Bayes", func() {
 		It("can calculate for 0 frequency", func() {
 			lfs := threeCookieJarsFeatures()
 			nb := TrainNB(lfs)
-			p, err := nb.Predict([]Featurer{CookieF{"plain"}})
+			p, err := nb.PosteriorOdds([]Featurer{CookieF{"plain"}})
 			if err != nil {
 				panic(err)
 			}

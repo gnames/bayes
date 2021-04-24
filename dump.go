@@ -2,14 +2,13 @@ package bayes
 
 import (
 	"bytes"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json"
 )
 
 // Dump serializes a NaiveBayes object into a JSON format.
 func (nb *NaiveBayes) Dump() []byte {
 	// json, err := jsoniter.MarshalIndent(nb, "", "  ")
-	json, err := jsoniter.Marshal(nb)
+	json, err := json.Marshal(nb)
 	if err != nil {
 		panic(err)
 	}
@@ -21,7 +20,7 @@ func (nb *NaiveBayes) Dump() []byte {
 // RegisterLabel function to inject a string-to-Label conversion map.
 func (nb *NaiveBayes) Restore(dump []byte) {
 	r := bytes.NewReader(dump)
-	err := jsoniter.NewDecoder(r).Decode(nb)
+	err := json.NewDecoder(r).Decode(nb)
 	if err != nil {
 		panic(err)
 	}
@@ -64,14 +63,14 @@ func (nb *NaiveBayes) MarshalJSON() ([]byte, error) {
 		FeatureFreq: ffs,
 		nbTemp:      (*nbTemp)(nb),
 	}
-	return jsoniter.MarshalIndent(&res, "", "  ")
+	return json.MarshalIndent(&res, "", "  ")
 }
 
 // UnmarshalJSON deserializes JSON data to a NaiveBayes object.
 func (nb *NaiveBayes) UnmarshalJSON(data []byte) (err error) {
 	var l Labeler
 	res := nbJSON{nbTemp: (*nbTemp)(nb)}
-	if err := jsoniter.Unmarshal(data, &res); err != nil {
+	if err := json.Unmarshal(data, &res); err != nil {
 		return err
 	}
 	ls := make([]Labeler, len(res.Labels))
