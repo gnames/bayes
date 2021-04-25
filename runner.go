@@ -109,7 +109,7 @@ func multiPosterior(nb *NaiveBayes, fs []Featurer,
 		}
 		likelihoods[label] = make(map[FeatureName]map[FeatureValue]float64)
 		if !nb.IgnorePriorOdds {
-			likelihoods[label][FeatureName("PriorOdds")] =
+			likelihoods[label][FeatureName("priorOdds")] =
 				map[FeatureValue]float64{FeatureValue("true"): odds}
 		}
 
