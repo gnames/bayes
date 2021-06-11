@@ -2,7 +2,18 @@
 
 ## Unreleased
 
-- Add [#15]: golang module support
+## [v0.1.3]
+
+- Add: remove dependency on ginkgo testing.
+
+## [v0.1.2]
+
+- Add: rename priorOdds field.
+
+## [v0.1.1]
+
+- Add [#15]: golang module support.
+- Fix: bug in odds calculation.
 
 ## [v0.1.0]
 
@@ -24,6 +35,9 @@
 
 This document follows [changelog guidelines]
 
+[v0.1.3]: https://github.com/gnames/bayes/compare/v0.1.2...v0.1.3
+[v0.1.2]: https://github.com/gnames/bayes/compare/v0.1.1...v0.1.2
+[v0.1.1]: https://github.com/gnames/bayes/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/gnames/bayes/tree/v0.1.0
 
 [#15]: https://github.com/gnames/bayes/issues/15
@@ -41,4 +55,3 @@ This document follows [changelog guidelines]
 [#2]: https://github.com/gnames/bayes/issues/2
 [#1]: https://github.com/gnames/bayes/issues/1
 
-[changelog guidelines]: https://github.com/olivierlacan/keep-a-changelog
