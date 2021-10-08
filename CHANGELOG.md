@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.2.1]
+
+- Add: JSON instructions to posterior.Odds output.
+
 ## [v0.2.0]
 
 - Add [#16]: improve architecture and usage (backward incompatible).
