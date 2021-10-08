@@ -1,264 +1,267 @@
 package bayes_test
 
 import (
-	"reflect"
-	"strings"
+	"fmt"
+	"log"
 	"testing"
 
 	"github.com/gnames/bayes"
+	ft "github.com/gnames/bayes/ent/feature"
 	"github.com/stretchr/testify/assert"
 )
 
-// bayes.RegisterLabel(labelsDict)
-
 func TestNew(t *testing.T) {
-	nb := bayes.NewNaiveBayes()
-	assert.Equal(t, len(nb.Labels), 0)
-	assert.NotEqual(t, nb, bayes.NaiveBayes{})
+	nb := bayes.New()
+	_, ok := nb.(bayes.Trainer)
+	assert.True(t, ok)
+	_, ok = nb.(bayes.Serializer)
+	assert.True(t, ok)
+	_, ok = nb.(bayes.Calc)
+	assert.True(t, ok)
 }
 
-func TestTrainNB(t *testing.T) {
+func TestTrain(t *testing.T) {
 	lfs := cookieJarsFeatures()
-	nb := bayes.TrainNB(lfs)
-	assert.Equal(t, len(nb.Labels), 2)
-	plain := nb.FeatureFreq[bayes.FeatureName("CookieF")][bayes.FeatureValue("plain")]
-	assert.Equal(t, plain[Jar1], 30.0)
-	chocolate := nb.FeatureFreq[bayes.FeatureName("CookieF")][bayes.FeatureValue("chocolate")]
-	assert.Equal(t, chocolate[Jar2], 15.0)
-	assert.Equal(t, nb.LabelFreq[Jar1], 40.0)
+	nb := bayes.New()
+	nb.Train(lfs)
+	o := nb.Inspect()
+	assert.Equal(t, len(o.Labels), 2)
+	plain := o.FeatureCases["CookieF"]["plain"]
+	assert.Equal(t, plain["Jar1"], 30.0)
+	chocolate := o.FeatureCases["CookieF"]["chocolate"]
+	assert.Equal(t, chocolate["Jar2"], 15.0)
+	assert.Equal(t, o.LabelCases["Jar1"], 40.0)
 }
 
-// TestDumpRestore dumps the content of NaiveBayes object to json file
-func TestDumpRestore(t *testing.T) {
+// TestDumpLoad dumps the content of NaiveBayes object to json file
+func TestDumpLoad(t *testing.T) {
 	lfs := cookieJarsFeatures()
-	nb := bayes.TrainNB(lfs)
-	json := nb.Dump()
-	assert.Equal(t, string(json)[0:15], "{\"labels\":[\"Jar")
-	nb2 := bayes.NewNaiveBayes()
-	nb2.Restore(json)
-	assert.Equal(t, nb2.Total, 70.0)
-	assert.Equal(t, len(nb2.Labels), 2)
-	assert.Equal(t, nb2.LabelFreq[Jar1], 40.0)
-	assert.Equal(t, nb2.
-		FeatureFreq[bayes.FeatureName("CookieF")][bayes.FeatureValue("chocolate")][Jar1],
-		10.0)
+	nb := bayes.New()
+	nb.Train(lfs)
+	json, err := nb.Dump()
+	assert.Nil(t, err)
+	assert.Equal(t, string(json)[0:15], "{\n  \"labels\": [")
+	nb2 := bayes.New()
+	err = nb2.Load(json)
+	assert.Nil(t, err)
+	o := nb2.Inspect()
+	assert.Equal(t, o.CasesTotal, 70.0)
+	assert.Equal(t, len(o.Labels), 2)
+	assert.Equal(t, o.LabelCases["Jar1"], 40.0)
+	assert.Equal(t, o.FeatureCases["CookieF"]["chocolate"]["Jar1"], 10.0)
 }
 
-func TestTrainingPrior(t *testing.T) {
+func TestPriorOdds(t *testing.T) {
 	lfs := cookieJarsFeatures()
-	nb := bayes.TrainNB(lfs)
+	nb := bayes.New()
+	nb.Train(lfs)
 
 	t.Run("return prior odds", func(t *testing.T) {
-		odds, err := nb.TrainingPrior(Jar1)
+		odds, err := nb.PriorOdds(ft.Label("Jar1"))
 		assert.Nil(t, err)
 		assert.InDelta(t, odds, 1.333, 0.01)
 	})
 
 	t.Run("returns error on unkown labels", func(t *testing.T) {
-		_, err := nb.TrainingPrior(Helicopter)
-		assert.Equal(t, err.Error(), "Unkown label \"Helicopter\"")
+		_, err := nb.PriorOdds(ft.Label("Helicopter"))
+		assert.Equal(t, err.Error(), "unkown label 'Helicopter'")
 	})
 
 	t.Run("returns error if prior odds are infinite", func(t *testing.T) {
-		nb := bayes.NewNaiveBayes()
-		l := Surething
-		nb.LabelFreq[l] = 10.0
-		nb.Total = 10.0
-		_, err := nb.TrainingPrior(l)
-		assert.Equal(t, err.Error(), "Infinite prior odds")
-	})
-}
-
-func TestOdds(t *testing.T) {
-	t.Run("returns odds from frequencies", func(t *testing.T) {
-		lfs := cookieJarsFeatures()
-		nb := bayes.TrainNB(lfs)
-		odds, err := bayes.Odds(Jar1, nb.LabelFreq)
-		assert.Nil(t, err)
-		assert.InDelta(t, odds, 1.33, 0.01)
-	})
-
-	t.Run("calculates 'local' frequences correctly", func(t *testing.T) {
-		l1 := Lots
-		l2 := Little
-		lf := make(bayes.LabelFreq)
-		lf[l1] = 9.0
-		lf[l2] = 1.0
-		odds, err := bayes.Odds(Lots, lf)
-		assert.Nil(t, err)
-		assert.InDelta(t, odds, 9.00, 0.01)
-	})
-
-	t.Run("breaks if frequences are not sensical", func(t *testing.T) {
-		l := Surething
-		lf := make(bayes.LabelFreq)
-		lf[l] = 10.0
-		_, err := bayes.Odds(Surething, lf)
-		assert.Equal(t, err.Error(), "Infinite prior odds")
+		nb := bayes.New()
+		l := ft.Label("Surething")
+		lf := ft.LabeledFeatures{
+			Label: l,
+			Features: []ft.Feature{
+				{Name: ft.Name("question"), Value: ft.Val("yes")},
+			},
+		}
+		nb.Train([]ft.LabeledFeatures{lf})
+		o := nb.Inspect()
+		assert.Equal(t, o.CasesTotal, 1.0)
+		_, err := nb.PriorOdds(l)
+		assert.Equal(t, err.Error(), "infinite prior odds")
 	})
 }
 
 func TestPredict2Labels(t *testing.T) {
 	lfs := cookieJarsFeatures()
-	nb := bayes.TrainNB(lfs)
+	nb := bayes.New()
+	nb.Train(lfs)
 
 	t.Run("calculates posterior Probabilities", func(t *testing.T) {
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"}})
+		p, err := nb.PosteriorOdds([]ft.Feature{
+			{Name: ft.Name("CookieF"), Value: ft.Val("plain")},
+		})
 		assert.Nil(t, err)
 		assert.Equal(t, p.MaxOdds, 2.0)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 	})
 
 	t.Run("calculates with new odds", func(t *testing.T) {
-		lf := bayes.LabelFreq{
-			Jar1: 1,
-			Jar2: 6,
+		lc := map[ft.Label]float64{
+			ft.Label("Jar1"): 1,
+			ft.Label("Jar2"): 6,
 		}
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"}},
-			bayes.WithPriorOdds(lf))
+		p, err := nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+			},
+			bayes.OptPriorOdds(lc),
+		)
 		assert.Nil(t, err)
 		assert.InDelta(t, p.MaxOdds, 3.999, 0.1)
-		assert.Equal(t, p.MaxLabel, Jar2)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar2"))
 	})
 
 	t.Run("calculates without prior odds", func(t *testing.T) {
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"}},
-			bayes.IgnorePriorOdds)
+		p, err := nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+			},
+			bayes.OptIgnorePriorOdds(true),
+		)
 		assert.Nil(t, err)
 		assert.Equal(t, p.MaxOdds, 1.5)
-		assert.Equal(t, p.MaxLabel, Jar1)
-		p, _ = nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"}})
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
+		p, err = nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+			},
+		)
+		assert.Nil(t, err)
 		assert.Equal(t, p.MaxOdds, 2.0)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 	})
 
 	t.Run("calculates multiple posterior Probabilities", func(t *testing.T) {
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"},
-			CookieF{"plain"}})
+		p, err := nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+			},
+		)
 		assert.Nil(t, err)
 		assert.Equal(t, p.MaxOdds, 3.0)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 	})
 
 	t.Run("compensates infinite odds with crude smoothing", func(t *testing.T) {
-		f := []bayes.Featurer{CookieF{"chocolate"}, ShapeF{"star"}}
+		f := []ft.Feature{
+			{
+				Name:  ft.Name("CookieF"),
+				Value: ft.Val("chocolate"),
+			},
+			{
+				Name:  ft.Name("ShapeF"),
+				Value: ft.Val("star"),
+			},
+		}
 
 		p, err := nb.PosteriorOdds(f)
 		assert.Nil(t, err)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 		assert.InDelta(t, p.MaxOdds, 20, 1)
 	})
 
 	t.Run("ignores features that are not in training", func(t *testing.T) {
-		f := []bayes.Featurer{CookieF{"plain"}, ShapeF{"square"}}
+		f := []ft.Feature{
+			{
+				Name:  ft.Name("CookieF"),
+				Value: ft.Val("plain"),
+			},
+			{
+				Name:  ft.Name("ShapeF"),
+				Value: ft.Val("square"),
+			},
+		}
 
 		p, err := nb.PosteriorOdds(f)
 		assert.Nil(t, err)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 		assert.Equal(t, p.MaxOdds, 2.0)
 	})
 
 	t.Run("breaks on unknown features", func(t *testing.T) {
-		f := []bayes.Featurer{UnknownF{}}
+		f := []ft.Feature{
+			{
+				Name: ft.Name("UnknownF"),
+			},
+		}
 		_, err := nb.PosteriorOdds(f)
-		assert.Equal(t, err.Error(), "All features are unknown")
+		assert.Equal(t, err.Error(), "all features are unknown")
 	})
 
 	t.Run("ignores uknown features", func(t *testing.T) {
-		f := []bayes.Featurer{CookieF{"plain"}, UnknownF{}}
+		f := []ft.Feature{
+			{
+				Name:  ft.Name("CookieF"),
+				Value: ft.Val("plain"),
+			},
+			{
+				Name: ft.Name("UnknownF"),
+			},
+		}
 		p, err := nb.PosteriorOdds(f)
 		assert.Nil(t, err)
 		assert.Equal(t, p.MaxOdds, 2.0)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 	})
 }
 
 func TestPredict3Labels(t *testing.T) {
 	lfs := threeCookieJarsFeatures()
-	nb := bayes.TrainNB(lfs)
+	nb := bayes.New()
+	nb.Train(lfs)
 
 	t.Run("calculcates with 3 labels", func(t *testing.T) {
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"chocolate"},
-			CookieF{"chocolate"}})
+		p, err := nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("chocolate"),
+				},
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("chocolate"),
+				},
+			},
+		)
 		if err != nil {
 			panic(err)
 		}
-		assert.Equal(t, p.MaxLabel, Jar3)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar3"))
 		assert.InDelta(t, p.MaxOdds, 4.479, 0.001)
 	})
 
 	t.Run("can calculate for 0 frequency", func(t *testing.T) {
-		p, err := nb.PosteriorOdds([]bayes.Featurer{CookieF{"plain"}})
+		p, err := nb.PosteriorOdds(
+			[]ft.Feature{
+				{
+					Name:  ft.Name("CookieF"),
+					Value: ft.Val("plain"),
+				},
+			},
+		)
 		assert.Nil(t, err)
-		assert.Equal(t, p.MaxLabel, Jar1)
+		assert.Equal(t, p.MaxLabel, ft.Label("Jar1"))
 		assert.InDelta(t, p.MaxOdds, 2.0, 0.01)
 	})
-}
-
-type Label int
-
-const (
-	Jar1 Label = iota
-	Jar2
-	Jar3
-	Helicopter
-	Surething
-	Lots
-	Little
-)
-
-var labels = []string{"Jar1", "Jar2", "Jar3", "Helicopter", "Surething", "Lots",
-	"Little"}
-
-var labelsDict = func() map[string]bayes.Labeler {
-	res := make(map[string]bayes.Labeler)
-	for i, v := range labels {
-		res[v] = Label(i)
-	}
-	return res
-}()
-
-func (l Label) String() string {
-	return labels[l]
-}
-
-type CookieF struct {
-	kind string
-}
-
-func (c CookieF) Name() bayes.FeatureName {
-	return featureName(c)
-}
-
-func (c CookieF) Value() bayes.FeatureValue {
-	return bayes.FeatureValue(c.kind)
-}
-
-type ShapeF struct {
-	kind string
-}
-
-func (s ShapeF) Name() bayes.FeatureName {
-	return featureName(s)
-}
-
-func (s ShapeF) Value() bayes.FeatureValue {
-	return bayes.FeatureValue(s.kind)
-}
-
-func featureName(f bayes.Featurer) bayes.FeatureName {
-	t := strings.Split(reflect.TypeOf(f).Name(), ".")
-	return bayes.FeatureName(t[len(t)-1])
-}
-
-type UnknownF struct{}
-
-func (u UnknownF) Name() bayes.FeatureName {
-	return featureName(u)
-}
-
-func (u UnknownF) Value() bayes.FeatureValue {
-	return bayes.FeatureValue("true")
 }
 
 // cookieJarsFeatures implements features from
@@ -268,50 +271,155 @@ func (u UnknownF) Value() bayes.FeatureValue {
 // there are 2 jars with cookies. Jar1 has 10 chocolate and 30 vanilla cookies,
 // jar2 has 15 of each. If a cookie is randomly taken from a random jar, what
 // is a probability it came from the jar1?
-func cookieJarsFeatures() []bayes.LabeledFeatures {
-	bayes.RegisterLabel(labelsDict)
-	var f1 CookieF
-	var f2 ShapeF
-	var lfs []bayes.LabeledFeatures
+func cookieJarsFeatures() []ft.LabeledFeatures {
+	n1 := ft.Name("CookieF")
+	n2 := ft.Name("ShapeF")
+	var lfs []ft.LabeledFeatures
 
 	for i := 1; i <= 40; i++ {
-		f1 = CookieF{"chocolate"}
+		v1 := ft.Val("chocolate")
 		if i > 10 {
-			f1 = CookieF{"plain"}
+			v1 = ft.Val("plain")
 		}
-		f2 = ShapeF{"star"}
-		lf := bayes.LabeledFeatures{
-			Label:    Jar1,
-			Features: []bayes.Featurer{f1, f2},
+		f1 := ft.Feature{Name: n1, Value: v1}
+
+		f2 := ft.Feature{Name: n2, Value: ft.Val("star")}
+		lf := ft.LabeledFeatures{
+			Label:    ft.Label("Jar1"),
+			Features: []ft.Feature{f1, f2},
 		}
 		lfs = append(lfs, lf)
 	}
 
 	for i := 1; i <= 30; i++ {
-		f1 = CookieF{"chocolate"}
+		v1 := ft.Val("chocolate")
 		if i > 15 {
-			f1 = CookieF{"plain"}
+			v1 = ft.Val("plain")
 		}
-		f2 = ShapeF{"round"}
-		lf := bayes.LabeledFeatures{
-			Label:    Jar2,
-			Features: []bayes.Featurer{f1, f2},
+		f1 := ft.Feature{Name: n1, Value: v1}
+
+		f2 := ft.Feature{Name: n2, Value: ft.Val("round")}
+		lf := ft.LabeledFeatures{
+			Label:    ft.Label("Jar2"),
+			Features: []ft.Feature{f1, f2},
 		}
 		lfs = append(lfs, lf)
 	}
 	return lfs
 }
 
-func threeCookieJarsFeatures() []bayes.LabeledFeatures {
-	var f CookieF
+func threeCookieJarsFeatures() []ft.LabeledFeatures {
+	var f ft.Feature
 	lfs := cookieJarsFeatures()
 	for i := 1; i <= 40; i++ {
-		f = CookieF{"chocolate"}
-		lf := bayes.LabeledFeatures{
-			Label:    Jar3,
-			Features: []bayes.Featurer{f},
+		f = ft.Feature{
+			Name:  ft.Name("CookieF"),
+			Value: ft.Val("chocolate"),
+		}
+		lf := ft.LabeledFeatures{
+			Label:    ft.Label("Jar3"),
+			Features: []ft.Feature{f},
 		}
 		lfs = append(lfs, lf)
 	}
 	return lfs
+}
+
+func Example() {
+	// there are two jars of cookies, they are our training set.
+	// Cookies have be round or star-shaped.
+	// There are plain or chocolate chips cookies.
+	jar1 := ft.Label("Jar1")
+	jar2 := ft.Label("Jar2")
+
+	// Every labeled feature-set provides data for one cookie. It tells
+	// what jar has the cookie, what its kind and shape.
+	cookie1 := ft.LabeledFeatures{
+		Label: jar1,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("plain")},
+			{Name: ft.Name("shape"), Value: ft.Val("round")},
+		},
+	}
+	cookie2 := ft.LabeledFeatures{
+		Label: jar1,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("plain")},
+			{Name: ft.Name("shape"), Value: ft.Val("star")},
+		},
+	}
+	cookie3 := ft.LabeledFeatures{
+		Label: jar1,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
+			{Name: ft.Name("shape"), Value: ft.Val("star")},
+		},
+	}
+	cookie4 := ft.LabeledFeatures{
+		Label: jar1,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("plain")},
+			{Name: ft.Name("shape"), Value: ft.Val("round")},
+		},
+	}
+	cookie5 := ft.LabeledFeatures{
+		Label: jar1,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("plain")},
+			{Name: ft.Name("shape"), Value: ft.Val("round")},
+		},
+	}
+	cookie6 := ft.LabeledFeatures{
+		Label: jar2,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
+			{Name: ft.Name("shape"), Value: ft.Val("star")},
+		},
+	}
+	cookie7 := ft.LabeledFeatures{
+		Label: jar2,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
+			{Name: ft.Name("shape"), Value: ft.Val("star")},
+		},
+	}
+	cookie8 := ft.LabeledFeatures{
+		Label: jar2,
+		Features: []ft.Feature{
+			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
+			{Name: ft.Name("shape"), Value: ft.Val("star")},
+		},
+	}
+
+	lfs := []ft.LabeledFeatures{
+		cookie1, cookie2, cookie3, cookie4, cookie5, cookie6, cookie7, cookie8,
+	}
+
+	nb := bayes.New()
+	nb.Train(lfs)
+	oddsPrior, err := nb.PriorOdds(jar1)
+	if err != nil {
+		log.Println(err)
+	}
+
+	// If we got a chocolate star-shaped cookie, which jar it came from most
+	// likely?
+	aCookie := []ft.Feature{
+		{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
+		{Name: ft.Name("shape"), Value: ft.Val("star")},
+	}
+
+	res, err := nb.PosteriorOdds(aCookie)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// it is more likely to that a random cookie comes from Jar1, but
+	// for chocolate and star-shaped cookie it is more likely to come from
+	// Jar2.
+	fmt.Printf("Prior odds for Jar1 are %0.2f\n", oddsPrior)
+	fmt.Printf("The cookie came from %s, with odds %0.2f\n", res.MaxLabel, res.MaxOdds)
+	// Output:
+	// Prior odds for Jar1 are 1.67
+	// The cookie came from Jar2, with odds 7.50
 }

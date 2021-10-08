@@ -3,105 +3,93 @@ package bayes
 import (
 	"bytes"
 	"encoding/json"
+
+	ft "github.com/gnames/bayes/ent/feature"
+	"github.com/gnames/bayes/ent/output"
 )
 
-// Dump serializes a NaiveBayes object into a JSON format.
-func (nb *NaiveBayes) Dump() []byte {
-	// json, err := jsoniter.MarshalIndent(nb, "", "  ")
-	json, err := json.Marshal(nb)
-	if err != nil {
-		panic(err)
-	}
-	return json
+// Dump serializes a Bayes object into a JSON format.
+func (nb *bayes) Dump() ([]byte, error) {
+	return json.MarshalIndent(nb, "", "  ")
 }
 
-// Restore deserializes a JSON text into NaiveBayes object. The function needs
-// to know how to convert a string that represents a label to an object. Use
-// RegisterLabel function to inject a string-to-Label conversion map.
-func (nb *NaiveBayes) Restore(dump []byte) {
+// Load deserializes a JSON text into Bayes object. The function needs
+// to know how to convert a string that represents a label to an object.
+func (nb *bayes) Load(dump []byte) error {
 	r := bytes.NewReader(dump)
-	err := json.NewDecoder(r).Decode(nb)
-	if err != nil {
-		panic(err)
-	}
-}
-
-type nbTemp NaiveBayes
-type featureFreqJSON map[FeatureName]map[FeatureValue]map[string]float64
-type nbJSON struct {
-	Labels      []string           `json:"labels"`
-	LabelFreq   map[string]float64 `json:"label_freq"`
-	FeatureFreq featureFreqJSON    `json:"feature_freq"`
-	*nbTemp
+	return json.NewDecoder(r).Decode(nb)
 }
 
 // MarshalJSON serializes a NaiveBayes object to JSON.
-func (nb *NaiveBayes) MarshalJSON() ([]byte, error) {
-	ls := make([]string, len(nb.Labels))
-	for i, v := range nb.Labels {
-		ls[i] = v.String()
-	}
-	lfs := make(map[string]float64)
-	for k, v := range nb.LabelFreq {
-		lfs[k.String()] = v
-	}
-	ffs := make(map[FeatureName]map[FeatureValue]map[string]float64)
-	for k1, v1 := range nb.FeatureFreq {
-		val := make(map[FeatureValue]map[string]float64)
-		ffs[k1] = val
-		for k2, v2 := range v1 {
-			val := make(map[string]float64)
-			ffs[k1][k2] = val
-			for k3, v3 := range v2 {
-				ffs[k1][k2][k3.String()] = v3
-			}
-		}
-	}
-	res := nbJSON{
-		Labels:      ls,
-		LabelFreq:   lfs,
-		FeatureFreq: ffs,
-		nbTemp:      (*nbTemp)(nb),
-	}
+func (nb *bayes) MarshalJSON() ([]byte, error) {
+	res := nb.Inspect()
 	return json.MarshalIndent(&res, "", "  ")
 }
 
-// UnmarshalJSON deserializes JSON data to a NaiveBayes object.
-func (nb *NaiveBayes) UnmarshalJSON(data []byte) (err error) {
-	var l Labeler
-	res := nbJSON{nbTemp: (*nbTemp)(nb)}
-	if err := json.Unmarshal(data, &res); err != nil {
-		return err
+func (nb *bayes) Inspect() output.Output {
+	ls := make([]string, len(nb.labels))
+	for i, v := range nb.labels {
+		ls[i] = string(v)
 	}
-	ls := make([]Labeler, len(res.Labels))
-	for i, v := range res.Labels {
-		if l, err = LabelFactory(v); err != nil {
-			return err
-		}
-		ls[i] = l
+
+	lfs := make(map[string]float64)
+	for k, v := range nb.labelCases {
+		lfs[string(k)] = v
 	}
-	nb.Labels = ls
-	lfs := make(map[Labeler]float64)
-	for k, v := range res.LabelFreq {
-		if l, err = LabelFactory(k); err != nil {
-			return err
-		}
-		lfs[l] = v
-	}
-	nb.LabelFreq = lfs
-	for k1, v1 := range res.FeatureFreq {
-		val := make(map[FeatureValue]map[Labeler]float64)
-		nb.FeatureFreq[k1] = val
+
+	ffs := make(map[string]map[string]map[string]float64)
+	for k1, v1 := range nb.featureCases {
+		val := make(map[string]map[string]float64)
+		ffs[string(k1)] = val
 		for k2, v2 := range v1 {
-			val := make(map[Labeler]float64)
-			nb.FeatureFreq[k1][k2] = val
+			val := make(map[string]float64)
+			ffs[string(k1)][string(k2)] = val
 			for k3, v3 := range v2 {
-				if l, err = LabelFactory(k3); err != nil {
-					return err
-				}
-				nb.FeatureFreq[k1][k2][l] = v3
+				ffs[string(k1)][string(k2)][string(k3)] = v3
 			}
 		}
 	}
+	return output.Output{
+		Labels:       ls,
+		CasesTotal:   nb.casesTotal,
+		LabelCases:   lfs,
+		FeatureCases: ffs,
+	}
+}
+
+// UnmarshalJSON deserializes JSON data to a NaiveBayes object.
+func (nb *bayes) UnmarshalJSON(data []byte) error {
+	var res output.Output
+	if err := json.Unmarshal(data, &res); err != nil {
+		return err
+	}
+
+	nb.labels = make([]ft.Label, len(res.Labels))
+	for i, v := range res.Labels {
+		nb.labels[i] = ft.Label(v)
+	}
+
+	nb.casesTotal = res.CasesTotal
+
+	for k, v := range res.LabelCases {
+		nb.labelCases[ft.Label(k)] = v
+	}
+
+	for k1, v1 := range res.FeatureCases {
+		val := make(map[ft.Val]map[ft.Label]float64)
+		name := ft.Name(k1)
+		nb.featureCases[name] = val
+		for k2, v2 := range v1 {
+			v := make(map[ft.Label]float64)
+			value := ft.Val(k2)
+			nb.featureCases[name][value] = v
+			for k3, v3 := range v2 {
+				label := ft.Label(k3)
+				nb.featureCases[name][value][label] = v3
+			}
+		}
+	}
+
+	nb.featTotal()
 	return nil
 }

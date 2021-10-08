@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.2.0]
+
+- Add [#16]: improve architecture and usage (backward incompatible).
+
 ## [v0.1.3]
 
 - Add: remove dependency on ginkgo testing.
