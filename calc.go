@@ -129,7 +129,7 @@ func (nb *bayes) multiPosterior(
 		LabelOdds:   oddsPost,
 		MaxLabel:    maxLabel,
 		MaxOdds:     maxOdds,
-		LabelFreq:   labelCases,
+		LabelCases:  labelCases,
 		Likelihoods: likelihoods,
 	}
 	return p, nil

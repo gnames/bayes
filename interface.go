@@ -36,9 +36,9 @@ type Calc interface {
 	PosteriorOdds([]ft.Feature, ...Option) (posterior.Odds, error)
 }
 
-// Bayes means to use Bayes algorithm for calculation of posterior and prior
-// odds, for training Bayes using manually curated data, allows to save and
-// load Bayes data to/from a long storage.
+// Bayes interface uses Bayes algorithm for calculation the posterior and prior
+// odds, for training it takes manually curated data, and allows to serialize
+// and deserialize the data.
 type Bayes interface {
 	Trainer
 	Serializer
