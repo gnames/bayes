@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.3.0]
+
+- Add: Likelihood method to calculate a likelihood for a feature and a label.
+
 ## [v0.2.1]
 
 - Add: JSON instructions to posterior.Odds output.

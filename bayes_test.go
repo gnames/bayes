@@ -84,6 +84,41 @@ func TestPriorOdds(t *testing.T) {
 	})
 }
 
+func TestLikelihood(t *testing.T) {
+	lfs := cookieJarsFeatures()
+	nb := bayes.New()
+	nb.Train(lfs)
+
+	t.Run("calculates likelihood of one feature", func(t *testing.T) {
+		f := ft.Feature{Name: ft.Name("CookieF"), Value: ft.Val("plain")}
+
+		odds, err := nb.Likelihood(f, ft.Label("Jar1"))
+		assert.Nil(t, err)
+		assert.Equal(t, odds, 1.5)
+	})
+
+	t.Run("returns error if feature name is not known", func(t *testing.T) {
+		f := ft.Feature{Name: ft.Name("donat"), Value: ft.Val("plain")}
+
+		_, err := nb.Likelihood(f, ft.Label("Jar1"))
+		assert.EqualError(t, err, "no feature with name 'donat'")
+	})
+
+	t.Run("returns error if feature value is not known", func(t *testing.T) {
+		f := ft.Feature{Name: ft.Name("CookieF"), Value: ft.Val("wood")}
+
+		_, err := nb.Likelihood(f, ft.Label("Jar1"))
+		assert.EqualError(t, err, "feature 'CookieF' has no value 'wood'")
+	})
+
+	t.Run("returns error if label is not known", func(t *testing.T) {
+		f := ft.Feature{Name: ft.Name("CookieF"), Value: ft.Val("plain")}
+
+		_, err := nb.Likelihood(f, ft.Label("Box"))
+		assert.EqualError(t, err, "there is no label 'Box'")
+	})
+}
+
 func TestPredict2Labels(t *testing.T) {
 	lfs := cookieJarsFeatures()
 	nb := bayes.New()

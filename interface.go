@@ -34,6 +34,8 @@ type Calc interface {
 	// PosteriorOdds uses set of features to determing which label they belong
 	// to with the most probability.
 	PosteriorOdds([]ft.Feature, ...Option) (posterior.Odds, error)
+	// Likelihood gives an isolated likelihood of a feature.
+	Likelihood(ft.Feature, ft.Label) (float64, error)
 }
 
 // Bayes interface uses Bayes algorithm for calculation the posterior and prior

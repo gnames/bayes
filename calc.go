@@ -109,7 +109,7 @@ func (nb *bayes) multiPosterior(
 				continue
 			}
 
-			lh := nb.likelihood(f, label)
+			lh, _ := nb.Likelihood(f, label)
 			likelihoods[label][f.Name] = map[ft.Val]float64{f.Value: lh}
 
 			i++
@@ -135,10 +135,22 @@ func (nb *bayes) multiPosterior(
 	return p, nil
 }
 
-func (nb *bayes) likelihood(feature ft.Feature, label ft.Label) float64 {
+func (nb *bayes) Likelihood(
+	feature ft.Feature,
+	label ft.Label,
+) (float64, error) {
+	err := nb.checkFeature(feature)
+	if err != nil {
+		return 0, err
+	}
+	err = nb.checkLabel(label)
+	if err != nil {
+		return 0, err
+	}
 	smooth := 1.0
 	name := feature.Name
 	value := feature.Value
+
 	countFeature := nb.featureCases[name][value][label]
 
 	countRest := (nb.featureTotal[name][value] - countFeature)
@@ -148,13 +160,12 @@ func (nb *bayes) likelihood(feature ft.Feature, label ft.Label) float64 {
 		countFeature = smooth
 	}
 
-	pFeature := countFeature / nb.labelCases[label]
-
 	if countRest == 0 {
 		countRest = smooth
 	}
 	// end crude smoothing
 
+	pFeature := countFeature / nb.labelCases[label]
 	pRest := countRest / (nb.casesTotal - nb.labelCases[label])
-	return pFeature / pRest
+	return pFeature / pRest, nil
 }

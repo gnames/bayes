@@ -55,6 +55,24 @@ func (b *bayes) Odds(lfs ft.LabeledFeatures) (float64, error) {
 	return 0, nil
 }
 
+func (nb *bayes) checkFeature(f ft.Feature) error {
+	var ok bool
+	if _, ok = nb.featureCases[f.Name]; !ok {
+		return fmt.Errorf("no feature with name '%s'", f.Name)
+	}
+	if _, ok = nb.featureCases[f.Name][f.Value]; !ok {
+		return fmt.Errorf("feature '%s' has no value '%s'", f.Name, f.Value)
+	}
+	return nil
+}
+
+func (nb *bayes) checkLabel(l ft.Label) error {
+	if _, ok := nb.labelCases[l]; !ok {
+		return fmt.Errorf("there is no label '%s'", l)
+	}
+	return nil
+}
+
 func (nb *bayes) featTotal() {
 	for nk, nv := range nb.featureCases {
 		for vk, vv := range nv {
