@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.4.0]
+
+- Add: Refactor for better clarity, simplify data structures.
+
 ## [v0.3.0]
 
 - Add: Likelihood method to calculate a likelihood for a feature and a label.

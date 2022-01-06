@@ -4,7 +4,7 @@ An implementation of Naive Bayes classifier. More details are in [docs].
 
 ## Usage
 
-This package allows to classify a new entity into one or another category (label)
+This package allows to classify a new entity into one or another category (class)
 according to features of the entity. The algorithm uses known data to calculate
 a weight of each feature for each category.
 
@@ -13,69 +13,69 @@ func Example() {
 	// there are two jars of cookies, they are our training set.
 	// Cookies have be round or star-shaped.
 	// There are plain or chocolate chips cookies.
-	jar1 := ft.Label("Jar1")
-	jar2 := ft.Label("Jar2")
+	jar1 := ft.Class("Jar1")
+	jar2 := ft.Class("Jar2")
 
-	// Every labeled feature-set provides data for one cookie. It tells
+	// Every preclassified feature-set provides data for one cookie. It tells
 	// what jar has the cookie, what its kind and shape.
-	cookie1 := ft.LabeledFeatures{
-		Label: jar1,
+	cookie1 := ft.ClassFeatures{
+		Class: jar1,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("plain")},
-			{Name: ft.Name("shape"), Value: ft.Val("round")},
+			{Name: "kind", Value: "plain"},
+			{Name: "shape", Value: "round"},
 		},
 	}
-	cookie2 := ft.LabeledFeatures{
-		Label: jar1,
+	cookie2 := ft.ClassFeatures{
+		Class: jar1,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("plain")},
-			{Name: ft.Name("shape"), Value: ft.Val("star")},
+			{Name: "kind", Value: "plain"},
+			{Name: "shape", Value: "star"},
 		},
 	}
-	cookie3 := ft.LabeledFeatures{
-		Label: jar1,
+	cookie3 := ft.ClassFeatures{
+		Class: jar1,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
-			{Name: ft.Name("shape"), Value: ft.Val("star")},
+			{Name: "kind", Value: "chocolate"},
+			{Name: "shape", Value: "star"},
 		},
 	}
-	cookie4 := ft.LabeledFeatures{
-		Label: jar1,
+	cookie4 := ft.ClassFeatures{
+		Class: jar1,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("plain")},
-			{Name: ft.Name("shape"), Value: ft.Val("round")},
+			{Name: "kind", Value: "plain"},
+			{Name: "shape", Value: "round"},
 		},
 	}
-	cookie5 := ft.LabeledFeatures{
-		Label: jar1,
+	cookie5 := ft.ClassFeatures{
+		Class: jar1,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("plain")},
-			{Name: ft.Name("shape"), Value: ft.Val("round")},
+			{Name: "kind", Value: "plain"},
+			{Name: "shape", Value: "round"},
 		},
 	}
-	cookie6 := ft.LabeledFeatures{
-		Label: jar2,
+	cookie6 := ft.ClassFeatures{
+		Class: jar2,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
-			{Name: ft.Name("shape"), Value: ft.Val("star")},
+			{Name: "kind", Value: "chocolate"},
+			{Name: "shape", Value: "star"},
 		},
 	}
-	cookie7 := ft.LabeledFeatures{
-		Label: jar2,
+	cookie7 := ft.ClassFeatures{
+		Class: jar2,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
-			{Name: ft.Name("shape"), Value: ft.Val("star")},
+			{Name: "kind", Value: "chocolate"},
+			{Name: "shape", Value: "star"},
 		},
 	}
-	cookie8 := ft.LabeledFeatures{
-		Label: jar2,
+	cookie8 := ft.ClassFeatures{
+		Class: jar2,
 		Features: []ft.Feature{
-			{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
-			{Name: ft.Name("shape"), Value: ft.Val("star")},
+			{Name: "kind", Value: "chocolate"},
+			{Name: "shape", Value: "star"},
 		},
 	}
 
-	lfs := []ft.LabeledFeatures{
+	lfs := []ft.ClassFeatures{
 		cookie1, cookie2, cookie3, cookie4, cookie5, cookie6, cookie7, cookie8,
 	}
 
@@ -89,8 +89,8 @@ func Example() {
 	// If we got a chocolate star-shaped cookie, which jar it came from most
 	// likely?
 	aCookie := []ft.Feature{
-		{Name: ft.Name("kind"), Value: ft.Val("chocolate")},
-		{Name: ft.Name("shape"), Value: ft.Val("star")},
+		{Name: ft.Name("kind"), Value: ft.Value("chocolate")},
+		{Name: ft.Name("shape"), Value: ft.Value("star")},
 	}
 
 	res, err := nb.PosteriorOdds(aCookie)
@@ -102,7 +102,7 @@ func Example() {
 	// for chocolate and star-shaped cookie it is more likely to come from
 	// Jar2.
 	fmt.Printf("Prior odds for Jar1 are %0.2f\n", oddsPrior)
-	fmt.Printf("The cookie came from %s, with odds %0.2f\n", res.MaxLabel, res.MaxOdds)
+	fmt.Printf("The cookie came from %s, with odds %0.2f\n", res.MaxClass, res.MaxOdds)
 	// Output:
 	// Prior odds for Jar1 are 1.67
 	// The cookie came from Jar2, with odds 7.50
@@ -113,20 +113,7 @@ func Example() {
 
 ### Testing
 
-Install [ginkgo], a [BDD] testing framefork for Go.
-
 ```bash
-go get github.com/onsi/ginkgo/ginkgo
-go get github.com/onsi/gomega
-```
-
-To run tests go to root directory of the project and run
-
-```bash
-ginkgo
-
-#or
-
 go test
 ```
 

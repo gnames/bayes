@@ -1,15 +1,15 @@
 package feature
 
-type LabeledFeatures struct {
-	Label
+type ClassFeatures struct {
+	Class
 	Features []Feature
 }
 
 type Feature struct {
-	Name  Name
-	Value Val
+	Name
+	Value
 }
 
-type Label string
+type Class string
 type Name string
-type Val string
+type Value string

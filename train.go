@@ -4,30 +4,27 @@ import (
 	ft "github.com/gnames/bayes/ent/feature"
 )
 
-func (nb *bayes) Train(lfs []ft.LabeledFeatures) {
+func (nb *bayes) Train(lfs []ft.ClassFeatures) {
 	for i := range lfs {
-		nb.labelCases[lfs[i].Label]++
+		nb.classCases[lfs[i].Class]++
 		nb.trainFeatures(lfs[i])
 	}
 
-	nb.labels = make([]ft.Label, len(nb.labelCases))
+	nb.classes = make([]ft.Class, len(nb.classCases))
 	var count int
-	for k, v := range nb.labelCases {
-		nb.labels[count] = k
+	for k, v := range nb.classCases {
+		nb.classes[count] = k
 		nb.casesTotal += v
 		count++
 	}
 	nb.featTotal()
 }
 
-func (nb *bayes) trainFeatures(lf ft.LabeledFeatures) {
+func (nb *bayes) trainFeatures(lf ft.ClassFeatures) {
 	for _, v := range lf.Features {
-		if _, ok := nb.featureCases[v.Name]; !ok {
-			nb.featureCases[v.Name] = make(map[ft.Val]map[ft.Label]float64)
+		if _, ok := nb.featureCases[v]; !ok {
+			nb.featureCases[v] = make(map[ft.Class]int)
 		}
-		if _, ok := nb.featureCases[v.Name][v.Value]; !ok {
-			nb.featureCases[v.Name][v.Value] = make(map[ft.Label]float64)
-		}
-		nb.featureCases[v.Name][v.Value][lf.Label]++
+		nb.featureCases[v][lf.Class]++
 	}
 }

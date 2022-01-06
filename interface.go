@@ -1,15 +1,15 @@
 package bayes
 
 import (
+	"github.com/gnames/bayes/ent/bayesdump"
 	ft "github.com/gnames/bayes/ent/feature"
-	"github.com/gnames/bayes/ent/output"
 	"github.com/gnames/bayes/ent/posterior"
 )
 
 // Trainer interface provides methods for training Bayes object to
 // data from the training set.
 type Trainer interface {
-	Train([]ft.LabeledFeatures)
+	Train([]ft.ClassFeatures)
 }
 
 // Serializer provides methods for dumping data from Bayes object to
@@ -17,7 +17,7 @@ type Trainer interface {
 type Serializer interface {
 	// Inspect returns back simplified and publicly accessed information that
 	// is normally private for Bayes object.
-	Inspect() output.Output
+	Inspect() bayesdump.BayesDump
 	// Load takes a slice of bytes that corresponds to output.Output and
 	// creates a Bayes instance from it.
 	Load([]byte) error
@@ -30,12 +30,12 @@ type Serializer interface {
 // new data, allowing to classify the data according to its features.
 type Calc interface {
 	// PriorOdds method returns Odds from the training.
-	PriorOdds(ft.Label) (float64, error)
-	// PosteriorOdds uses set of features to determing which label they belong
+	PriorOdds(ft.Class) (float64, error)
+	// PosteriorOdds uses set of features to determing which class they belong
 	// to with the most probability.
 	PosteriorOdds([]ft.Feature, ...Option) (posterior.Odds, error)
 	// Likelihood gives an isolated likelihood of a feature.
-	Likelihood(ft.Feature, ft.Label) (float64, error)
+	Likelihood(ft.Feature, ft.Class) (float64, error)
 }
 
 // Bayes interface uses Bayes algorithm for calculation the posterior and prior

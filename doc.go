@@ -67,9 +67,9 @@ Terminology
 In natural language processing `evidences` are often called `features`. We
 follow the same convention in this package.
 
-Hypotheses are often called `classes` or `labels`. Based on the outcome we
-classify an entity (assign a label to the entity in other words). In this
-package we use the term `label` for hypotheses. Every label receives a number
-of elements or `tokens`, each with a set of features.
+Hypotheses are often called classes. Based on the outcome we
+classify an entity (assign a class to the entity in other words).
+Every class receives a number of elements or `tokens`,
+each with a set of features.
 */
 package bayes

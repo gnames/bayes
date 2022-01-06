@@ -8,13 +8,30 @@ import (
 )
 
 type bayes struct {
-	labels          []ft.Label
-	casesTotal      float64
-	labelCases      map[ft.Label]float64
-	featureCases    map[ft.Name]map[ft.Val]map[ft.Label]float64
-	featureTotal    map[ft.Name]map[ft.Val]float64
-	tmpLabelCases   map[ft.Label]float64
-	tmpCasesTotal   float64
+	// classes are a classifier categories. There must be at least 2 classes.
+	classes []ft.Class
+
+	// casesTotal is the number of entries in the training set including
+	// all classes.
+	casesTotal int
+
+	// classCases is the number of entities per one class.
+	classCases map[ft.Class]int
+
+	// featureCases is the number of entities per a particular feature.
+	featureCases map[ft.Feature]map[ft.Class]int
+
+	// featureTotal is the number of all entities for a perticular feature.
+	featureTotal map[ft.Feature]int
+
+	// tmpClassCases is used to provide a new prior odds.
+	tmpClassCases map[ft.Class]int
+
+	// tmpCasesTotal is used to provide a new prior odds.
+	tmpCasesTotal int
+
+	// ignorePriorOdds indicates that likelihood will be calculated without
+	// taking in account prior odds.
 	ignorePriorOdds bool
 }
 
@@ -22,66 +39,58 @@ type bayes struct {
 // from either training or from loading a dump of previous training data.
 func New() Bayes {
 	nb := &bayes{
-		labelCases:   make(map[ft.Label]float64),
-		featureCases: make(map[ft.Name]map[ft.Val]map[ft.Label]float64),
-		featureTotal: make(map[ft.Name]map[ft.Val]float64),
+		classCases:   make(map[ft.Class]int),
+		featureCases: make(map[ft.Feature]map[ft.Class]int),
+		featureTotal: make(map[ft.Feature]int),
 	}
 	return nb
 }
 
 // PriorOdds returns prior odds calculated from the training set
-func (nb *bayes) PriorOdds(l ft.Label) (float64, error) {
-	return odds(l, nb.labelCases, nb.casesTotal)
+func (nb *bayes) PriorOdds(l ft.Class) (float64, error) {
+	return odds(l, nb.classCases, nb.casesTotal)
 }
 
 func odds(
-	l ft.Label,
-	lc map[ft.Label]float64,
-	casesTotal float64,
+	l ft.Class,
+	lc map[ft.Class]int,
+	casesTotal int,
 ) (float64, error) {
-	var freq float64
+	var freq int
 	var ok bool
 	if freq, ok = lc[l]; !ok {
-		return 0, fmt.Errorf("unkown label '%s'", l)
+		return 0, fmt.Errorf("unkown class '%s'", l)
 	}
-	pL := freq / casesTotal
+	pL := float64(freq) / float64(casesTotal)
 	if pL == 1 || casesTotal == 0 {
 		return 0, errors.New("infinite prior odds")
 	}
 	return pL / (1 - pL), nil
 }
 
-func (b *bayes) Odds(lfs ft.LabeledFeatures) (float64, error) {
+func (b *bayes) Odds(lfs ft.ClassFeatures) (float64, error) {
 	return 0, nil
 }
 
 func (nb *bayes) checkFeature(f ft.Feature) error {
 	var ok bool
-	if _, ok = nb.featureCases[f.Name]; !ok {
-		return fmt.Errorf("no feature with name '%s'", f.Name)
-	}
-	if _, ok = nb.featureCases[f.Name][f.Value]; !ok {
-		return fmt.Errorf("feature '%s' has no value '%s'", f.Name, f.Value)
+	if _, ok = nb.featureCases[f]; !ok {
+		return fmt.Errorf("no feature with name '%s' and value '%s'", f.Name, f.Value)
 	}
 	return nil
 }
 
-func (nb *bayes) checkLabel(l ft.Label) error {
-	if _, ok := nb.labelCases[l]; !ok {
+func (nb *bayes) checkClass(l ft.Class) error {
+	if _, ok := nb.classCases[l]; !ok {
 		return fmt.Errorf("there is no label '%s'", l)
 	}
 	return nil
 }
 
 func (nb *bayes) featTotal() {
-	for nk, nv := range nb.featureCases {
-		for vk, vv := range nv {
-			for _, lv := range vv {
-				if _, ok := nb.featureTotal[nk]; !ok {
-					nb.featureTotal[nk] = make(map[ft.Val]float64)
-				}
-				nb.featureTotal[nk][vk] += lv
-			}
+	for fk, fv := range nb.featureCases {
+		for _, v := range fv {
+			nb.featureTotal[fk] += v
 		}
 	}
 }
