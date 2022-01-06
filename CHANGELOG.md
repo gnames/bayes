@@ -4,11 +4,13 @@
 
 ## [v0.4.0]
 
-- Add: Refactor for better clarity, simplify data structures.
+- Add: Refactor for better clarity, simplify data structures
+       (backward incompatible).
 
 ## [v0.3.0]
 
-- Add: Likelihood method to calculate a likelihood for a feature and a label.
+- Add: Likelihood method to calculate a likelihood for a feature and a label
+       (backward incompatible).
 
 ## [v0.2.1]
 
@@ -16,7 +18,8 @@
 
 ## [v0.2.0]
 
-- Add [#16]: improve architecture and usage (backward incompatible).
+- Add [#16]: improve architecture and usage
+             (backward incompatible).
 
 ## [v0.1.3]
 

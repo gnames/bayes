@@ -38,9 +38,9 @@ type Calc interface {
 	Likelihood(ft.Feature, ft.Class) (float64, error)
 }
 
-// Bayes interface uses Bayes algorithm for calculation the posterior and prior
-// odds, for training it takes manually curated data, and allows to serialize
-// and deserialize the data.
+// Bayes interface uses Bayes algorithm for calculation of the posterior and
+// prior odds. For training it takes manually curated data packed into
+// features, and allows to serialize and deserialize the data.
 type Bayes interface {
 	Trainer
 	Serializer
