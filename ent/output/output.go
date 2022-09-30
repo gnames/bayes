@@ -46,3 +46,19 @@ func (od OddsDetails) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(odds)
 }
+
+func (od OddsDetails) UnmarshalJSON(data []byte) error {
+	var err error
+	var odds []oddsOutput
+	od = OddsDetails{}
+
+	if err = json.Unmarshal(data, &odds); err != nil {
+		return err
+	}
+
+	for _, v := range odds {
+		od[v.Feature] = v.Odds
+	}
+
+	return nil
+}

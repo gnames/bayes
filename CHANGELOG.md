@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [v0.5.0]
+
+- Add [#17]: JSON marshalling for OddsDetails output.
+
 ## [v0.4.0]
 
 - Add: Refactor for better clarity, simplify data structures
