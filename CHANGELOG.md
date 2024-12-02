@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## [v0.5.2] - 2024-12-02 Mon
+
+- Add CITATION.cff file.
+
+## [v0.5.1]
+
+- Add modules update.
+
 ## [v0.5.0]
 
 - Add [#17]: JSON marshalling for OddsDetails output.
@@ -9,12 +17,12 @@
 ## [v0.4.0]
 
 - Add: Refactor for better clarity, simplify data structures
-       (backward incompatible).
+  (backward incompatible).
 
 ## [v0.3.0]
 
 - Add: Likelihood method to calculate a likelihood for a feature and a label
-       (backward incompatible).
+  (backward incompatible).
 
 ## [v0.2.1]
 
@@ -23,7 +31,7 @@
 ## [v0.2.0]
 
 - Add [#16]: improve architecture and usage
-             (backward incompatible).
+  (backward incompatible).
 
 ## [v0.1.3]
 
@@ -62,7 +70,6 @@ This document follows [changelog guidelines]
 [v0.1.2]: https://github.com/gnames/bayes/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/gnames/bayes/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/gnames/bayes/tree/v0.1.0
-
 [#15]: https://github.com/gnames/bayes/issues/15
 [#14]: https://github.com/gnames/bayes/issues/14
 [#13]: https://github.com/gnames/bayes/issues/13
@@ -77,4 +84,3 @@ This document follows [changelog guidelines]
 [#3]: https://github.com/gnames/bayes/issues/3
 [#2]: https://github.com/gnames/bayes/issues/2
 [#1]: https://github.com/gnames/bayes/issues/1
-
