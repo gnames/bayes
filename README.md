@@ -1,5 +1,7 @@
 # bayes [![Build Status][travis-img]][travis] [![Doc Status][doc-img]][doc]
 
+[![DOI](https://zenodo.org/badge/107587981.svg)](https://doi.org/10.5281/zenodo.14262609)
+
 An implementation of Naive Bayes classifier. More details are in [docs].
 
 ## Usage

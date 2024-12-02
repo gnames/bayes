@@ -8,4 +8,5 @@ authors:
     given-names: "Dmitry"
     orcid: "https://orcid.org/0000-0003-1593-1417"
 repository-code: "https://github.com/gnames/bayes"
+doi: 10.5281/zenodo.14262610
 license: MIT
