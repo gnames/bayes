@@ -67,7 +67,7 @@ func TestPriorOdds(t *testing.T) {
 
 	t.Run("returns error on unknown classes", func(t *testing.T) {
 		_, err := nb.PriorOdds(ft.Class("Helicopter"))
-		assert.Equal(t, "unkown class 'Helicopter'", err.Error())
+		assert.Equal(t, "unknown class 'Helicopter'", err.Error())
 	})
 
 	t.Run("returns error if prior odds are infinite", func(t *testing.T) {

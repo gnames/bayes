@@ -59,7 +59,7 @@ func odds(
 	var freq int
 	var ok bool
 	if freq, ok = lc[l]; !ok {
-		return 0, fmt.Errorf("unkown class '%s'", l)
+		return 0, fmt.Errorf("unknown class '%s'", l)
 	}
 	pL := float64(freq) / float64(casesTotal)
 	if pL == 1 || casesTotal == 0 {
